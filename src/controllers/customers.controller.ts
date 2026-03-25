@@ -1,9 +1,8 @@
 import { Request, Response } from "express";
 import { Customer } from "../models/core.models";
-import { Business } from "../models/core.models";
 import { Transaction, Subscription } from "../models/billing.models";
 import logger from "../utils/logger";
-import { getBusinessId } from "../utils/customer";
+import { getBusinessId } from "../utils/profile";
 
 interface AuthReq extends Request {
   user?: { id: string };

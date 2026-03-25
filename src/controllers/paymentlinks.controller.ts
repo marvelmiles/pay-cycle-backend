@@ -25,7 +25,14 @@ interface AuthReq extends Request {
 
 export const handleCardPayment = async (req: Request, res: Response) => {
   try {
-    const { cardDetails, amount, customerDetails, paymentType } = req.body;
+    const {
+      cardDetails,
+      amount,
+      customerDetails,
+      paymentType,
+      businessId,
+      productId,
+    } = req.body;
 
     const data = {
       paymentType,
@@ -39,6 +46,9 @@ export const handleCardPayment = async (req: Request, res: Response) => {
         pan: cardDetails.pan,
         pin: cardDetails.pin,
       }),
+      customer: customerDetails,
+      businessId,
+      productId,
     };
 
     const result = await interswitchService.initiateCardPayment(data);
@@ -66,8 +76,6 @@ export const verifyPaymentOtp = async (req: Request, res: Response) => {
 
 export const confirmPayment = async (req: Request, res: Response) => {
   try {
-    console.log(req.query);
-
     const result = await interswitchService.confirmPayment(req.query as any);
 
     res.json(serializeSuccessResponse(result));
@@ -349,8 +357,8 @@ export const initiatePublicPayment = async (
       return;
     }
 
-    const product = link.product as InstanceType<typeof Product>;
-    const business = link.business as InstanceType<typeof Business>;
+    const product = (link as any).product as InstanceType<typeof Product>;
+    const business = (link as any).business as InstanceType<typeof Business>;
 
     // Upsert customer
     let customer = await Customer.findOne({
@@ -472,7 +480,9 @@ export const verifyPublicPayment = async (
       }
 
       // Create subscription if recurring
-      const product = transaction.product as InstanceType<typeof Product>;
+      const product = (transaction as any).product as InstanceType<
+        typeof Product
+      >;
       if (product?.type === "recurring") {
         const now = new Date();
         const periodEnd = new Date(now);

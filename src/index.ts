@@ -11,7 +11,7 @@ import billingRoutes from "./routes/billing.routes";
 import { errorHandler, notFound } from "./middleware/auth.middleware";
 import logger from "./utils/logger";
 
-const app = express();
+const app: any = express();
 const PORT = process.env.PORT || 5000;
 
 // ==================== CONNECT DB ====================
@@ -69,7 +69,7 @@ if (process.env.NODE_ENV !== "test") {
 }
 
 // ==================== HEALTH CHECK ====================
-app.get("/health", (_req, res) => {
+app.get("/health", (_req: any, res: any) => {
   res.json({
     success: true,
     message: "BillFlow API is running",
@@ -87,7 +87,7 @@ app.use("/api/v1", billingRoutes);
 app.post(
   "/webhooks/interswitch",
   express.raw({ type: "application/json" }),
-  async (req, res) => {
+  async (req: any, res: any) => {
     try {
       const signature = req.headers["x-interswitch-signature"] as string;
       const payload = req.body;

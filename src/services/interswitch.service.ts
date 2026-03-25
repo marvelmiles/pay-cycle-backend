@@ -2,6 +2,8 @@ import axios from "axios";
 import logger from "../utils/logger";
 import { serverRequest } from "./apit.request";
 import { encodeBase64 } from "../utils/encoder";
+import { Customer, ICustomerDoc } from "../models/core.models";
+import { Transaction } from "../models/billing.models";
 
 interface InterswitchConfig {
   clientId: string;
@@ -17,6 +19,9 @@ interface CardPaymentData {
   transactionRef: string;
   authData: string;
   paymentType: "one_time" | "recurring";
+  businessId: string;
+  customer: ICustomerDoc;
+  productId: string;
 }
 
 interface SubscriptionData {
@@ -55,7 +60,7 @@ class InterswitchService {
       const credentials =
         credentialType === "interswitch"
           ? "SUtJQUIyM0E0RTI3NTY2MDVDMUFCQzMzQ0UzQzI4N0UyNzI2N0Y2NjBENjE6c2VjcmV0"
-          : "SUtJQTVFNEQ5NzJEMTgxQzc1MTlENkY4QTRGMTAxM0M2MkUyRDRGNTJCNUM6RFNMR3lrRTIxZWxOOGVh"; // "SUtJQTI2NzQyNjdGN0JDOUZGOUVGMjRFRjdBOTU0NDYyRERGQ0MxN0JCRjc6SW0yX0Z3dXN0ellHdlFL";
+          : "SUtJQTI2NzQyNjdGN0JDOUZGOUVGMjRFRjdBOTU0NDYyRERGQ0MxN0JCRjc6SW0yX0Z3dXN0ellHdlFL";
 
       // encodeBase64(
       //   `${this.config.clientId}:${this.config.clientSecret}`,
@@ -76,7 +81,7 @@ class InterswitchService {
         Date.now() + (response.data.expires_in - 60) * 1000,
       );
       return this.accessToken!;
-    } catch (error) {
+    } catch (error: any) {
       console.log(error.response?.data, error.response?.status);
       logger.error(`Interswitch auth error: ${error}`);
       throw new Error("Failed to authenticate with Interswitch");
@@ -101,6 +106,37 @@ class InterswitchService {
     };
   }
 
+  async syncCustomer(businessId: string, customer: ICustomerDoc) {
+    const existing = await Customer.findOne({
+      business: businessId,
+      email: customer.email,
+    });
+
+    if (existing) return existing;
+
+    return await Customer.create({
+      ...customer,
+      business: businessId,
+    });
+  }
+
+  async updateRefDb(trxRef: string, businessId: string) {
+    const transaction = await Transaction.findOne({
+      reference: trxRef,
+      business: businessId,
+    });
+
+    if (!transaction || transaction.status !== "pending") return;
+
+    transaction.status = "successful";
+
+    await transaction.save();
+
+    await Customer.findByIdAndUpdate(transaction.customer, {
+      $inc: { totalSpent: transaction.amount },
+    });
+  }
+
   async initiateCardPayment(payload: CardPaymentData): Promise<{
     transactionRef: string;
     paymentId: string;
@@ -109,9 +145,51 @@ class InterswitchService {
     responseCode: string;
     supportMessage: string;
     withOtp: boolean;
+    transactionId: string;
   }> {
+    let trxId;
+
     try {
-      console.log(payload.paymentType, "pay type");
+      const customer = await this.syncCustomer(
+        payload.businessId,
+        payload.customer,
+      );
+
+      const trx = await Transaction.create({
+        business: payload.businessId,
+        customer: customer._id,
+        product: payload.productId,
+        amount: payload.amount,
+        currency: payload.currency,
+        status: "pending",
+        type: payload.paymentType,
+        reference: payload.transactionRef,
+      });
+
+      trxId = trx._id;
+
+      const handleResponse = async (response: any) => {
+        const code =
+          this.normalizeResponseCode(response.data.responseCode) || "";
+
+        const withOtp = code === "VERIFY_OTP";
+
+        const trxRef = response.data.transactionRef || "";
+
+        return {
+          transactionId: trx._id.toString(),
+          transactionRef: trxRef,
+          paymentId: response.data.paymentId || "",
+          message: response.data.message || "",
+          amount: response.data.amount || "",
+          responseCode: code,
+          supportMessage:
+            response.data.plainTextSupportMessage ||
+            response.data.supportMessage ||
+            "",
+          withOtp,
+        };
+      };
 
       if (payload.paymentType === "recurring") {
         const tr = await axios.post(
@@ -146,19 +224,7 @@ class InterswitchService {
           },
         );
 
-        const code = this.normalizeResponseCode(pr.data.responseCode);
-
-        console.log(pr.data, " purchase data");
-
-        return {
-          message: pr.data.message,
-          amount: pr.data.amount,
-          transactionRef: pr.data.transactionRef,
-          responseCode: code,
-          withOtp: code === "VERIFY_OTP",
-          paymentId: pr.data.paymentId || "",
-          supportMessage: pr.data.supportMessage || "",
-        };
+        return await handleResponse(pr);
       }
 
       const response = await axios.post(
@@ -168,22 +234,23 @@ class InterswitchService {
           headers: await this.createHeaders(),
         },
       );
-
-      const code = this.normalizeResponseCode(response.data.responseCode) || "";
-
-      return {
-        transactionRef: response.data.transactionRef || "",
-        paymentId: response.data.paymentId || "",
-        message: response.data.message || "",
-        amount: response.data.amount || "",
-        responseCode: code,
-        supportMessage: response.data.plainTextSupportMessage || "",
-        withOtp: code === "VERIFY_OTP",
-      };
-    } catch (error) {
+      return await handleResponse(response);
+    } catch (error: any) {
       console.log(error.response?.data, error.response?.status);
 
+      if (trxId) {
+        await Transaction.updateOne(
+          {
+            _id: trxId,
+          },
+          {
+            status: "failed",
+          },
+        );
+      }
+
       logger.error(`Interswitch initiate payment error: ${error}`);
+
       throw error;
     }
   }
@@ -222,14 +289,19 @@ class InterswitchService {
           this.normalizeResponseCode(response.data.responseCode) || "",
         cardType: response.data.cardType || "",
       };
-    } catch (error) {
+    } catch (error: any) {
       console.log(error.response?.data, error.response?.status);
       logger.error(`Interswitch verify payment otp error: ${error}`);
+
       throw error;
     }
   }
 
-  async confirmPayment(payload: { trxRef: string; amount: string }): Promise<{
+  async confirmPayment(payload: {
+    trxRef: string;
+    amount: string;
+    businessId: string;
+  }): Promise<{
     amount: number;
     cardNumber: string;
     merchantReference: string;
@@ -259,6 +331,8 @@ class InterswitchService {
       );
 
       console.log(response.data);
+
+      await this.updateRefDb(payload.trxRef, payload.businessId);
 
       return {
         amount: response.data.Amount,

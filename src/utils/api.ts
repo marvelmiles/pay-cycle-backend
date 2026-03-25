@@ -9,14 +9,16 @@ export const serializeSuccessResponse = (data: any) => {
 
 // could be a regular error or axios error
 export const serializeErrorResponse = (error: any) => {
+  if (error.success === false && typeof error.status === "number") return error;
+
   const message = error.response?.data?.message || "Something went wrong.";
 
-  const code = error.response?.status || error.status || 500;
+  const status = error.response?.status || error.status || 500;
 
   return {
     success: false,
     message,
-    code,
+    status,
     errors: error.response?.data?.errors || [],
   };
 };
@@ -24,5 +26,5 @@ export const serializeErrorResponse = (error: any) => {
 export const createErrorResponse = (res: Response, error: any) => {
   const err = serializeErrorResponse(error);
 
-  res.status(err.code).json(err);
+  res.status(err.status).json(err);
 };

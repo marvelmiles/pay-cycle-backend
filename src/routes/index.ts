@@ -7,7 +7,7 @@ import * as subscriptionCtrl from "../controllers/subscriptions.controller";
 import * as analyticsCtrl from "../controllers/analytics.controller";
 import { authenticate } from "../middleware/auth.middleware";
 
-const router = Router();
+const router: any = Router();
 
 // ==================== AUTH ====================
 router.post("/auth/register", authCtrl.register);
