@@ -41,13 +41,6 @@ export const handleCardPayment = async (req: Request, res: Response) => {
       }),
     };
 
-    console.log(
-      data.authData,
-      data.customerId,
-      data.transactionRef,
-      data.amount,
-    );
-
     const result = await interswitchService.initiateCardPayment(data);
 
     res.json(serializeSuccessResponse(result));

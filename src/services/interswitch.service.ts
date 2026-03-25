@@ -47,15 +47,15 @@ class InterswitchService {
   private async getAccessToken(
     credentialType: TOKEN_CREDENTIAL_TYPE = "custom",
   ): Promise<string> {
-    if (this.accessToken) {
-      return this.accessToken;
-    }
+    // if (this.accessToken) {
+    //   return this.accessToken;
+    // }
 
     try {
       const credentials =
         credentialType === "interswitch"
           ? "SUtJQUIyM0E0RTI3NTY2MDVDMUFCQzMzQ0UzQzI4N0UyNzI2N0Y2NjBENjE6c2VjcmV0"
-          : "SUtJQTI2NzQyNjdGN0JDOUZGOUVGMjRFRjdBOTU0NDYyRERGQ0MxN0JCRjc6SW0yX0Z3dXN0ellHdlFL";
+          : "SUtJQTVFNEQ5NzJEMTgxQzc1MTlENkY4QTRGMTAxM0M2MkUyRDRGNTJCNUM6RFNMR3lrRTIxZWxOOGVh"; // "SUtJQTI2NzQyNjdGN0JDOUZGOUVGMjRFRjdBOTU0NDYyRERGQ0MxN0JCRjc6SW0yX0Z3dXN0ellHdlFL";
 
       // encodeBase64(
       //   `${this.config.clientId}:${this.config.clientSecret}`,
@@ -77,6 +77,7 @@ class InterswitchService {
       );
       return this.accessToken!;
     } catch (error) {
+      console.log(error.response?.data, error.response?.status);
       logger.error(`Interswitch auth error: ${error}`);
       throw new Error("Failed to authenticate with Interswitch");
     }
@@ -202,8 +203,6 @@ class InterswitchService {
     cardType: string;
   }> {
     try {
-      console.log(payload);
-
       const response = await axios.post(
         "https://qa.interswitchng.com/api/v3/purchases/otps/auths",
         payload,
