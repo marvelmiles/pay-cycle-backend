@@ -123,12 +123,14 @@ export const getPaymentLink = async (
   try {
     const businessId = await getBusinessId(req.user!.id);
     const link = await PaymentLink.findOne({
-      _id: req.params.id,
+      slug: req.params.slug,
       business: businessId,
-    }).populate(
-      "product",
-      "name price interval type currency features description",
-    );
+    })
+      .populate(
+        "product",
+        "name price interval type currency features description",
+      )
+      .populate("business");
     if (!link) {
       res
         .status(404)
@@ -137,9 +139,7 @@ export const getPaymentLink = async (
     }
     res.json({ success: true, data: link });
   } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to fetch payment link" });
+    createErrorResponse(res, error);
   }
 };
 

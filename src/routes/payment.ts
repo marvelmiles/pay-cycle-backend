@@ -20,7 +20,7 @@ paymentRouter.post("/pay/otp/verify", verifyPaymentOtp);
 paymentRouter.get("/pay/confirm-payment", confirmPayment);
 
 paymentRouter.get("/payment-links", authenticate, getPaymentLinks);
-paymentRouter.get("/payment-links/:id", authenticate, getPaymentLink);
+paymentRouter.get("/payment-links/:slug", authenticate, getPaymentLink);
 paymentRouter.post("/payment-links", authenticate, createPaymentLink);
 paymentRouter.put("/payment-links/:id", authenticate, updatePaymentLink);
 paymentRouter.delete("/payment-links/:id", authenticate, deletePaymentLink);

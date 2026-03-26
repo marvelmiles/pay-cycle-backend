@@ -1,4 +1,5 @@
 import { Response } from "express";
+import logger from "./logger";
 
 export const serializeSuccessResponse = (data: any) => {
   return {
@@ -23,8 +24,16 @@ export const serializeErrorResponse = (error: any) => {
   };
 };
 
-export const createErrorResponse = (res: Response, error: any) => {
+export const createErrorResponse = (
+  res: Response,
+  error: any,
+  withLoger = false,
+) => {
   const err = serializeErrorResponse(error);
+
+  if (withLoger || process.env.NODE_ENV !== "production") {
+    logger.error(`Error Response: ${err.message}`);
+  }
 
   res.status(err.status).json(err);
 };
