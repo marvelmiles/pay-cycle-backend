@@ -57,17 +57,17 @@ const server = app.listen(PORT, () => {
   logger.info(`API running on port ${PORT} [${process.env.NODE_ENV}]`);
 });
 
-process.on("SIGTERM", () => {
-  logger.info("SIGTERM received. Shutting down gracefully...");
-  server.close(() => {
-    logger.info("Server closed");
-    process.exit(0);
-  });
-});
+// process.on("SIGTERM", () => {
+//   logger.info("SIGTERM received. Shutting down gracefully...");
+//   server.close(() => {
+//     logger.info("Server closed");
+//     process.exit(0);
+//   });
+// });
 
-process.on("unhandledRejection", (err: Error) => {
-  logger.error(`Unhandled Rejection: ${err.message}`);
-  server.close(() => process.exit(1));
-});
+// process.on("unhandledRejection", (err: Error) => {
+//   logger.error(`Unhandled Rejection: ${err.message}`);
+//   server.close(() => process.exit(1));
+// });
 
 export default app;
