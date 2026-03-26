@@ -2,8 +2,7 @@ import mongoose from "mongoose";
 import logger from "../utils/logger";
 
 const connectDB = async (): Promise<void> => {
-  const mongoUri =
-    process.env.MONGODB_URI || "mongodb://localhost:27017/billing-platform";
+  const mongoUri = process.env.MONGODB_URI!;
 
   try {
     const conn = await mongoose.connect(mongoUri, {
