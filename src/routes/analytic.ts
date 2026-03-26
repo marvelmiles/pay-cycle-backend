@@ -6,3 +6,5 @@ const analyticRouter: IRouter = Router();
 
 analyticRouter.get("/analytics/dashboard", authenticate, getDashboardStats);
 analyticRouter.get("/analytics/revenue", authenticate, getRevenueChart);
+
+export default analyticRouter;

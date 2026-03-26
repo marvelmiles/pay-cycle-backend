@@ -12,6 +12,7 @@ import productRouter from "./routes/product";
 import trxRouter from "./routes/transaction";
 import { errorHandler, notFound } from "./middleware/error";
 import { globalLimiter } from "./middleware/request";
+import analyticRouter from "./routes/analytic";
 
 const app: Application = express();
 
@@ -47,6 +48,7 @@ app.use("/api/v1", customerRouter);
 app.use("/api/v1", paymentRouter);
 app.use("/api/v1", productRouter);
 app.use("/api/v1", trxRouter);
+app.use("/api/v1", analyticRouter);
 
 app.use(notFound);
 app.use(errorHandler);
