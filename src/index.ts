@@ -14,6 +14,9 @@ import { errorHandler, notFound } from "./middleware/error";
 import { globalLimiter } from "./middleware/request";
 
 const app: Application = express();
+
+app.set("trust proxy", 1);
+
 const PORT = process.env.PORT || 5000;
 
 connectDB();
