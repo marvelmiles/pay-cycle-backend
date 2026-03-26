@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
-import { Customer } from "../models/core.models";
-import { Transaction, Subscription } from "../models/billing.models";
 import logger from "../utils/logger";
 import { getBusinessId } from "../utils/profile";
+import Customer from "../models/profiles/customer";
+import Transaction from "../models/billing/transaction";
 
 interface AuthReq extends Request {
   user?: { id: string };
@@ -65,18 +65,15 @@ export const getCustomer = async (
       return;
     }
 
-    const [transactions, subscriptions] = await Promise.all([
+    const [transactions] = await Promise.all([
       Transaction.find({ customer: customer._id })
         .sort({ createdAt: -1 })
         .limit(10),
-      Subscription.find({ customer: customer._id })
-        .populate("product")
-        .sort({ createdAt: -1 }),
     ]);
 
     res.json({
       success: true,
-      data: { customer, transactions, subscriptions },
+      data: { customer, transactions },
     });
   } catch (error) {
     res

@@ -1,16 +1,8 @@
 import axios from "axios";
 import logger from "../utils/logger";
-import { serverRequest } from "./apit.request";
-import { encodeBase64 } from "../utils/encoder";
-import { Customer, ICustomerDoc } from "../models/core.models";
-import { Transaction } from "../models/billing.models";
-
-interface InterswitchConfig {
-  clientId: string;
-  clientSecret: string;
-  baseUrl: string;
-  passportUrl: string;
-}
+import Customer, { ICustomerDoc } from "../models/profiles/customer";
+import Transaction from "../models/billing/transaction";
+import { IProductDoc } from "../models/product";
 
 interface CardPaymentData {
   amount: string;
@@ -18,43 +10,29 @@ interface CardPaymentData {
   currency: string;
   transactionRef: string;
   authData: string;
-  paymentType: "one_time" | "recurring";
+  paymentType: IProductDoc["type"];
   businessId: string;
   customer: ICustomerDoc;
   productId: string;
 }
 
-interface SubscriptionData {
-  customerId: string;
-  planCode: string;
-  startDate?: string;
-}
-
 type TOKEN_CREDENTIAL_TYPE = "custom" | "interswitch";
 
 class InterswitchService {
-  private config: InterswitchConfig;
   private accessToken: string | null = null;
+
   private tokenExpiry: Date | null = null;
 
-  constructor() {
-    this.config = {
-      clientId: process.env.INTERSWITCH_CLIENT_ID || "",
-      clientSecret: process.env.INTERSWITCH_CLIENT_SECRET || "",
-      baseUrl:
-        process.env.INTERSWITCH_BASE_URL || "https://sandbox.interswitchng.com",
-      passportUrl:
-        process.env.INTERSWITCH_PASSPORT_URL ||
-        "https://passport.interswitchng.com",
-    };
+  private isTokenExpired(): boolean {
+    return !this.tokenExpiry || Date.now() >= this.tokenExpiry.getTime();
   }
 
   private async getAccessToken(
     credentialType: TOKEN_CREDENTIAL_TYPE = "custom",
   ): Promise<string> {
-    // if (this.accessToken) {
-    //   return this.accessToken;
-    // }
+    if (this.accessToken && !this.isTokenExpired()) {
+      return this.accessToken;
+    }
 
     try {
       const credentials =
@@ -62,9 +40,6 @@ class InterswitchService {
           ? "SUtJQUIyM0E0RTI3NTY2MDVDMUFCQzMzQ0UzQzI4N0UyNzI2N0Y2NjBENjE6c2VjcmV0"
           : "SUtJQTI2NzQyNjdGN0JDOUZGOUVGMjRFRjdBOTU0NDYyRERGQ0MxN0JCRjc6SW0yX0Z3dXN0ellHdlFL";
 
-      // encodeBase64(
-      //   `${this.config.clientId}:${this.config.clientSecret}`,
-      // );
       const response = await axios.post(
         `https://passport-v2.k8.isw.la/passport/oauth/token?grant_type=client_credentials`,
         {},
@@ -323,14 +298,9 @@ class InterswitchService {
             // for some reason using env response returns not found
             merchantcode: "MX275886", // process.env.INTERSWITCH_MERCHANT_CODE,
           },
-          headers: {
-            Authorization:
-              "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOlsiYXJiaXRlciIsImlzdy1wYXltZW50Z2F0ZXdheSIsInBhc3Nwb3J0IiwicHJvamVjdC14LW1lcmNoYW50IiwiaXN3LWNvbGxlY3Rpb25zIiwiaXN3LWNvcmUiLCJ2YXVsdCJdLCJtZXJjaGFudF9jb2RlIjoiTVgyNzU4ODYiLCJyZXF1ZXN0b3JfaWQiOiIyODk5NjM4MjE0MCIsInNjb3BlIjpbInByb2ZpbGUiXSwiZXhwIjoxNzc0NDYwMjgxLCJjbGllbnRfbmFtZSI6IkxvSjFhQTdrQnJpbkl0QmVEeXZQdnh2SmR5WHR1d1I4ejFzZGhKL1pyNXMxNjdyd0JaNW1YSmhKTkhuVG9PbE5fTVgyNzUiLCJqdGkiOiI4YWUwNGY3OC1kYWNiLTQ2OWEtOTM3MC0yYWFmOGMxMjljN2YiLCJwYXlhYmxlX2lkIjoiMTg2Mzk4IiwiY2xpZW50X2lkIjoiSUtJQTI2NzQyNjdGN0JDOUZGOUVGMjRFRjdBOTU0NDYyRERGQ0MxN0JCRjcifQ.yw9o4r74NfVIG00DEdXkOwwgVQWazbmYslyctj1N3dpO6PK27-ih3MotXnYjZd02R6RrxB6DapnmtVuntTk8Y1otv2hAcIrTKQkfNNN6uxHfy2KaBrqcP7zphbW6t8QpISZxUfGTD4KpRYxKdHJKwalUESe8X_l2cPoFb-OzVHMj0aHw_D8UUjLmiackK2YbxXo0jfmdNvscQU8ZmGcTLbVVNa3o5AZmqsZYxGDTZuNAkoyZ7uIHr0zZX5UjlBOAIVoGC00NoZJUpoIye6aKLzlTzmBTbnfOT-aJQzFQlrOnJB3r3T3uaBCcFKHBvrLq-ltHQmR84_DnaLW8FlJqIA",
-          },
+          headers: await this.createHeaders(),
         },
       );
-
-      console.log(response.data);
 
       await this.updateRefDb(payload.trxRef, payload.businessId);
 
@@ -350,101 +320,6 @@ class InterswitchService {
       logger.error(`failed to confirm payment ${error}`);
       throw error;
     }
-  }
-
-  // AI GENERATED
-
-  async verifyTransaction(reference: string): Promise<{
-    status: "successful" | "failed" | "pending";
-    amount: number;
-    message: string;
-    interswitchRef?: string;
-  }> {
-    try {
-      const token = await this.getAccessToken();
-
-      const response = await axios.get(
-        `${this.config.baseUrl}/quicktellerservice/api/v5/transactions/${reference}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-
-      const txn = response.data;
-      const isSuccess =
-        txn.responseCode === "00" || txn.responseDescription === "Approved";
-
-      return {
-        status: isSuccess
-          ? "successful"
-          : txn.responseCode === "09"
-            ? "pending"
-            : "failed",
-        amount: txn.amount / 100,
-        message: txn.responseDescription || "Transaction processed",
-        interswitchRef: txn.transactionIdentifier,
-      };
-    } catch (error) {
-      logger.error(`Interswitch verify error: ${error}`);
-      // Sandbox fallback - simulate success
-      return {
-        status: "successful",
-        amount: 0,
-        message: "Simulated success (sandbox)",
-      };
-    }
-  }
-
-  async createSubscriptionPlan(data: {
-    name: string;
-    amount: number;
-    interval: string;
-    currency?: string;
-  }): Promise<{ planCode: string }> {
-    try {
-      const token = await this.getAccessToken();
-      const response = await axios.post(
-        `${this.config.baseUrl}/api/v2/plans`,
-        {
-          name: data.name,
-          amount: data.amount * 100,
-          interval: data.interval,
-          currency: data.currency || "NGN",
-        },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      return { planCode: response.data.plan_code };
-    } catch (error) {
-      logger.error(`Create plan error: ${error}`);
-      return { planCode: `PLAN_${Date.now()}` };
-    }
-  }
-
-  async createSubscription(
-    data: SubscriptionData,
-  ): Promise<{ subscriptionCode: string }> {
-    try {
-      const token = await this.getAccessToken();
-      const response = await axios.post(
-        `${this.config.baseUrl}/api/v2/subscriptions`,
-        data,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      return { subscriptionCode: response.data.subscription_code };
-    } catch (error) {
-      logger.error(`Create subscription error: ${error}`);
-      return { subscriptionCode: `SUB_${Date.now()}` };
-    }
-  }
-
-  verifyWebhookSignature(payload: string, signature: string): boolean {
-    const crypto = require("crypto");
-    const secret = process.env.WEBHOOK_SECRET || "";
-    const hash = crypto
-      .createHmac("sha512", secret)
-      .update(payload)
-      .digest("hex");
-    return hash === signature;
   }
 }
 

@@ -1,11 +1,10 @@
-type HeadersInit = any;
-
 type TokenType = "interswitch" | "generic";
 
 interface RequestConfig extends RequestInit {
   useToken?: boolean;
   tokenType?: TokenType;
   params?: Record<string, any>;
+  headers: Record<string, string>;
 }
 
 interface ServerRequestConfig {
@@ -60,7 +59,7 @@ class ServerRequest {
       ...rest
     } = config || {};
 
-    const finalHeaders: HeadersInit = {
+    const finalHeaders: RequestInit["headers"] = {
       "Content-Type": "application/json",
       ...headers,
     };
@@ -84,7 +83,7 @@ class ServerRequest {
       throw new Error(errorText || "Request failed");
     }
 
-    return response.json();
+    return response.json() as any;
   }
 
   get<T>(url: string, config?: RequestConfig) {

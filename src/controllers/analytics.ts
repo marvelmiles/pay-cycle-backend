@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
-import { Transaction, Subscription } from "../models/billing.models";
-import { Customer } from "../models/core.models";
 import logger from "../utils/logger";
 import { getBusinessId } from "../utils/profile";
+import Transaction from "../models/billing/transaction";
+import Customer from "../models/profiles/customer";
 
 interface AuthReq extends Request {
   user?: { id: string };
@@ -23,7 +23,6 @@ export const getDashboardAnalytics = async (
       totalRevenue,
       monthRevenue,
       lastMonthRevenue,
-      activeSubscriptions,
       totalCustomers,
       newCustomersThisMonth,
       failedPayments,
@@ -55,7 +54,6 @@ export const getDashboardAnalytics = async (
         },
         { $group: { _id: null, total: { $sum: "$amount" } } },
       ]),
-      Subscription.countDocuments({ business: businessId, status: "active" }),
       Customer.countDocuments({ business: businessId }),
       Customer.countDocuments({
         business: businessId,
@@ -95,7 +93,6 @@ export const getDashboardAnalytics = async (
         totalRevenue: totalRevenue[0]?.total || 0,
         monthRevenue: currentMonthRevenue,
         revenueGrowth: Math.round(revenueGrowth * 100) / 100,
-        activeSubscriptions,
         totalCustomers,
         newCustomersThisMonth,
         failedPayments,
@@ -127,7 +124,6 @@ export const getDashboardStats = async (
       totalRevenue,
       monthRevenue,
       lastMonthRevenue,
-      activeSubscriptions,
       totalCustomers,
       newCustomersThisMonth,
       failedPayments,
@@ -159,7 +155,6 @@ export const getDashboardStats = async (
         },
         { $group: { _id: null, total: { $sum: "$amount" } } },
       ]),
-      Subscription.countDocuments({ business: businessId, status: "active" }),
       Customer.countDocuments({ business: businessId }),
       Customer.countDocuments({
         business: businessId,
@@ -199,7 +194,6 @@ export const getDashboardStats = async (
         totalRevenue: totalRevenue[0]?.total || 0,
         monthRevenue: currentMonthRevenue,
         revenueGrowth: Math.round(revenueGrowth * 100) / 100,
-        activeSubscriptions,
         totalCustomers,
         newCustomersThisMonth,
         failedPayments,
@@ -251,84 +245,5 @@ export const getRevenueChart = async (
     res
       .status(500)
       .json({ success: false, message: "Failed to fetch revenue chart" });
-  }
-};
-
-export const getSubscriptionMetrics = async (
-  req: AuthReq,
-  res: Response,
-): Promise<void> => {
-  try {
-    const businessId = await getBusinessId(req.user!.id, false);
-
-    const [byStatus, mrr, churnedLastMonth] = await Promise.all([
-      Subscription.aggregate([
-        { $match: { business: businessId } },
-        { $group: { _id: "$status", count: { $sum: 1 } } },
-      ]),
-      Subscription.aggregate([
-        { $match: { business: businessId, status: "active" } },
-        {
-          $lookup: {
-            from: "products",
-            localField: "product",
-            foreignField: "_id",
-            as: "product",
-          },
-        },
-        { $unwind: "$product" },
-        {
-          $group: {
-            _id: null,
-            mrr: {
-              $sum: {
-                $switch: {
-                  branches: [
-                    {
-                      case: { $eq: ["$product.interval", "yearly"] },
-                      then: { $divide: ["$product.price", 12] },
-                    },
-                    {
-                      case: { $eq: ["$product.interval", "weekly"] },
-                      then: { $multiply: ["$product.price", 4.33] },
-                    },
-                  ],
-                  default: "$product.price",
-                },
-              },
-            },
-          },
-        },
-      ]),
-      Subscription.countDocuments({
-        business: businessId,
-        status: "cancelled",
-        cancelledAt: {
-          $gte: new Date(
-            new Date().getFullYear(),
-            new Date().getMonth() - 1,
-            1,
-          ),
-          $lt: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-        },
-      }),
-    ]);
-
-    res.json({
-      success: true,
-      data: {
-        byStatus: byStatus.reduce((acc: Record<string, number>, item) => {
-          acc[item._id] = item.count;
-          return acc;
-        }, {}),
-        mrr: mrr[0]?.mrr || 0,
-        churnedLastMonth,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch subscription metrics",
-    });
   }
 };

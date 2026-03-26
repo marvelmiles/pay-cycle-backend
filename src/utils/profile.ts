@@ -1,4 +1,4 @@
-import { Business } from "../models/core.models";
+import Business from "../models/business";
 
 export const getBusinessId = async (userId: string, toString = false) => {
   const biz = await Business.findOne({ owner: userId });
