@@ -10,7 +10,7 @@ export const upload = multer({
 
 export const uploadToCloudinary = async (
   file: string | Buffer,
-  folder = "uploads",
+  folder = "billing-platform",
 ) => {
   return new Promise((resolve, reject) => {
     cloudinary.uploader.upload(

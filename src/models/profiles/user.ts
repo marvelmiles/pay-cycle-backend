@@ -11,6 +11,7 @@ export interface IUserDoc extends Document {
   isActive: boolean;
   refreshToken?: string;
   comparePassword(candidate: string): Promise<boolean>;
+  image?: string;
 }
 
 const UserSchema = new Schema<IUserDoc>(
@@ -33,6 +34,7 @@ const UserSchema = new Schema<IUserDoc>(
     isVerified: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
     refreshToken: { type: String, select: false },
+    image: String,
   },
   { timestamps: true },
 );

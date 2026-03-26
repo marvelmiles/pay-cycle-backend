@@ -3,6 +3,7 @@ import { createErrorResponse } from "../utils/api";
 import User from "../models/profiles/user";
 import Business from "../models/business";
 import { AuthReq } from "../types/request";
+import { uploadToCloudinary } from "../utils/stream";
 
 export const getProfile = async (
   req: Request & { user?: { id: string } },
@@ -53,13 +54,20 @@ export const updateProfile = async (req: AuthReq, res: Response) => {
       return;
     }
 
+    let fileObj: any;
+
+    if (req.file) {
+      fileObj = await uploadToCloudinary(req.file.buffer);
+    }
+
     await User.updateOne(
       {
         _id: user._id,
       },
       {
-        firstName: req.body.firstName,
-        lastName: req.body.lastName,
+        firstName: req.body.firstName || user.firstName,
+        lastName: req.body.lastName || user.lastName,
+        image: fileObj?.secure_url || user.image,
       },
     );
 
@@ -84,13 +92,20 @@ export const updateProfileBussiness = async (req: AuthReq, res: Response) => {
       return;
     }
 
+    let fileObj: any;
+
+    if (req.file) {
+      fileObj = await uploadToCloudinary(req.file.buffer);
+    }
+
     await Business.updateOne(
       {
         owner: req.user?.id,
       },
       {
-        name: req.body.name,
-        slug: req.body.slug,
+        name: req.body.name || business.name,
+        slug: req.body.slug || business.slug,
+        image: fileObj?.secure_url || business.image,
       },
     );
 

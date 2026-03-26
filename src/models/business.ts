@@ -18,6 +18,7 @@ export interface IBusinessDoc extends Document {
     webhookUrl?: string;
     webhookSecret?: string;
   };
+  image?: string;
 }
 
 const BusinessSchema = new Schema<IBusinessDoc>(
@@ -39,6 +40,7 @@ const BusinessSchema = new Schema<IBusinessDoc>(
       webhookUrl: { type: String },
       webhookSecret: { type: String },
     },
+    image: String,
   },
   { timestamps: true },
 );

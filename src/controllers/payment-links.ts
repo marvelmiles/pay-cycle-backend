@@ -121,16 +121,15 @@ export const getPaymentLink = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const businessId = await getBusinessId(req.user!.id);
     const link = await PaymentLink.findOne({
-      slug: req.params.slug,
-      business: businessId,
+      _id: req.params.id,
     })
       .populate(
         "product",
         "name price interval type currency features description",
       )
       .populate("business");
+
     if (!link) {
       res
         .status(404)
