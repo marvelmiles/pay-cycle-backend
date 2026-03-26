@@ -39,11 +39,11 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(compression());
 
-app.use("/api/v1/auth", authRouter);
-app.use("/api/v1/customers", customerRouter);
-app.use("/api/v1/payments", paymentRouter);
-app.use("/api/v1/products", productRouter);
-app.use("/api/v1/transactions", trxRouter);
+app.use("/api/v1", authRouter);
+app.use("/api/v1", customerRouter);
+app.use("/api/v1", paymentRouter);
+app.use("/api/v1", productRouter);
+app.use("/api/v1", trxRouter);
 
 app.use(notFound);
 app.use(errorHandler);
