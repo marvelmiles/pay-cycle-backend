@@ -1,11 +1,27 @@
 import { IRouter, Router } from "express";
 import { authenticate } from "../middleware/auth";
-import { getProfile, updateProfile } from "../controllers/profile";
+import {
+  getProfile,
+  updateProfile,
+  updateProfileBussiness,
+} from "../controllers/profile";
+import { upload } from "../utils/stream";
 
 const profileRouter: IRouter = Router();
 
 profileRouter.get("/profile/me", authenticate, getProfile);
 
-profileRouter.put("/profile/update", authenticate, updateProfile);
+profileRouter.put(
+  "/profile/me",
+  authenticate,
+  upload.single("image"),
+  updateProfile,
+);
 
+profileRouter.put(
+  "/profile/business",
+  authenticate,
+  upload.single("image"),
+  updateProfileBussiness,
+);
 export default profileRouter;

@@ -43,66 +43,60 @@ export const getProfile = async (
 
 export const updateProfile = async (req: AuthReq, res: Response) => {
   try {
-    const { business, profile } = req.body;
+    const user = await User.findById(req.user?.id);
 
-    let p404 = false,
-      b404 = false;
-
-    if (profile) {
-      const user = await User.findById(req.user?.id);
-
-      p404 = !user;
-
-      if (user) {
-        await User.updateOne(
-          {
-            _id: user._id,
-          },
-          {
-            firstName: profile.firstName,
-            lastName: profile.lastName,
-          },
-        );
-      }
-    }
-
-    if (business) {
-      const businessDoc = await Business.findOne({ owner: req.user?.id });
-
-      b404 = !businessDoc;
-
-      if (businessDoc) {
-        await Business.updateOne(
-          {
-            owner: req.user?.id,
-          },
-          {
-            name: business.name,
-            slug: business.slug,
-          },
-        );
-      }
-    }
-
-    if (b404 && p404) {
+    if (!user) {
       res.status(404).json({
-        success: true,
-        message: "User profile not found",
+        success: false,
+        message: "Profile not found",
       });
       return;
     }
 
-    const errors = [];
-
-    if (p404) errors.push({ status: 404, message: "Profile not found" });
-
-    if (b404)
-      errors.push({ status: 404, message: "Bussiness account not found" });
+    await User.updateOne(
+      {
+        _id: user._id,
+      },
+      {
+        firstName: req.body.firstName,
+        lastName: req.body.lastName,
+      },
+    );
 
     res.json({
       success: true,
-      message: "Pofile updated successfully",
-      errors,
+      message: "Profile updated successfully",
+    });
+  } catch (err) {
+    createErrorResponse(res, err);
+  }
+};
+
+export const updateProfileBussiness = async (req: AuthReq, res: Response) => {
+  try {
+    const business = await Business.findOne({ owner: req.user?.id });
+
+    if (!business) {
+      res.status(404).json({
+        success: false,
+        message: "Business acount not found",
+      });
+      return;
+    }
+
+    await Business.updateOne(
+      {
+        owner: req.user?.id,
+      },
+      {
+        name: req.body.name,
+        slug: req.body.slug,
+      },
+    );
+
+    res.json({
+      success: true,
+      message: "Business account updated successfully",
     });
   } catch (err) {
     createErrorResponse(res, err);
