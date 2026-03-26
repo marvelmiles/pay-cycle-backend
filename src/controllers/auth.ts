@@ -177,42 +177,6 @@ export const refreshToken = async (
   }
 };
 
-export const getMe = async (
-  req: Request & { user?: { id: string } },
-  res: Response,
-): Promise<void> => {
-  try {
-    const user = await User.findById(req.user?.id);
-    if (!user) {
-      res.status(404).json({ success: false, message: "User not found" });
-      return;
-    }
-    const business = await Business.findOne({ owner: user._id });
-    res.json({
-      success: true,
-      data: {
-        user: {
-          id: user._id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          role: user.role,
-        },
-        business: business
-          ? {
-              id: business._id,
-              name: business.name,
-              slug: business.slug,
-              settings: business.settings,
-            }
-          : null,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to get user" });
-  }
-};
-
 export const logout = async (
   req: Request & { user?: { id: string } },
   res: Response,

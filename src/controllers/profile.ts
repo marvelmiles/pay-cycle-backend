@@ -1,0 +1,110 @@
+import { Request, Response } from "express";
+import { createErrorResponse } from "../utils/api";
+import User from "../models/profiles/user";
+import Business from "../models/business";
+import { AuthReq } from "../types/request";
+
+export const getProfile = async (
+  req: Request & { user?: { id: string } },
+  res: Response,
+): Promise<void> => {
+  try {
+    const user = await User.findById(req.user?.id);
+    if (!user) {
+      res.status(404).json({ success: false, message: "User not found" });
+      return;
+    }
+    const business = await Business.findOne({ owner: user._id });
+
+    res.json({
+      success: true,
+      data: {
+        user: {
+          id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+        },
+        business: business
+          ? {
+              id: business._id,
+              name: business.name,
+              slug: business.slug,
+              settings: business.settings,
+            }
+          : null,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to get user" });
+  }
+};
+
+export const updateProfile = async (req: AuthReq, res: Response) => {
+  try {
+    const { business, profile } = req.body;
+
+    let p404 = false,
+      b404 = false;
+
+    if (profile) {
+      const user = await User.findById(req.user?.id);
+
+      p404 = !user;
+
+      if (user) {
+        await User.updateOne(
+          {
+            _id: user._id,
+          },
+          {
+            firstName: profile.firstName,
+            lastName: profile.lastName,
+          },
+        );
+      }
+    }
+
+    if (business) {
+      const businessDoc = await Business.findOne({ owner: req.user?.id });
+
+      b404 = !businessDoc;
+
+      if (businessDoc) {
+        await Business.updateOne(
+          {
+            owner: req.user?.id,
+          },
+          {
+            name: business.name,
+            slug: business.slug,
+          },
+        );
+      }
+    }
+
+    if (b404 && p404) {
+      res.status(404).json({
+        success: true,
+        message: "User profile not found",
+      });
+      return;
+    }
+
+    const errors = [];
+
+    if (p404) errors.push({ status: 404, message: "Profile not found" });
+
+    if (b404)
+      errors.push({ status: 404, message: "Bussiness account not found" });
+
+    res.json({
+      success: true,
+      message: "Pofile updated successfully",
+      errors,
+    });
+  } catch (err) {
+    createErrorResponse(res, err);
+  }
+};

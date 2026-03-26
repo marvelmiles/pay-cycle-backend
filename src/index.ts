@@ -13,6 +13,7 @@ import trxRouter from "./routes/transaction";
 import { errorHandler, notFound } from "./middleware/error";
 import { globalLimiter } from "./middleware/request";
 import analyticRouter from "./routes/analytic";
+import profileRouter from "./routes/profile";
 
 const app: Application = express();
 
@@ -44,6 +45,7 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use(compression());
 
 app.use("/api/v1", authRouter);
+app.use("/api/v1", profileRouter);
 app.use("/api/v1", customerRouter);
 app.use("/api/v1", paymentRouter);
 app.use("/api/v1", productRouter);
