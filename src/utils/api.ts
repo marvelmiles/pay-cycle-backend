@@ -27,7 +27,7 @@ export const serializeErrorResponse = (error: any) => {
 export const createErrorResponse = (
   res: Response,
   error: any,
-  withLoger = false,
+  withLoger = true,
 ) => {
   const err = serializeErrorResponse(error);
 
