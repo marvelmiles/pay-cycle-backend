@@ -22,9 +22,11 @@ PayCycle is a business billing and payment management platform built for the Nig
 
 Built on top of **Interswitch** as the payment gateway, PayCycle handles the full payment lifecycle: from creating a product, generating a checkout link, collecting card details with OTP verification, recording transactions, and managing payouts — all within a single, branded dashboard.
 
-**Endpoint breakdown** is documented at the end of the file
+We removed subscription features due to limitation and blockers encountered during development.
 
-Please read our **Limitation & Blocker** section with interswitch documentation.
+Please read our **Limitation & Blocker** section for more details
+
+**Endpoint breakdown** is documented at the end of the file
 
 ---
 
@@ -45,6 +47,12 @@ Please read our **Limitation & Blocker** section with interswitch documentation.
 ## ⚠️ Limitations & Blockers
 
 **NOTE**: Issues and blocker was escalated on the slack group. The issues below are issues the support team couldn't attend to before submittion.
+
+**Test Credentials**
+
+The payment system is built on test credentials. We submitted a complaint, filled live credentials request form created by the support team but couldn't get the live credentials from the support team on slack before submittion.
+
+Approval was gotten from the support team to go ahead and submit with test credentials.
 
 **Card Payment APi**
 
