@@ -34,7 +34,6 @@ Please read our **Limitation & Blocker** section with interswitch documentation.
 | --------------------------- | ----------------------------------------------------------------------------- |
 | 🔗 **Payment Links**        | Generate shareable checkout URLs tied to a product — no code required         |
 | 💳 **Checkout Page**        | Branded 3-step payment flow: customer details → card entry → OTP verification |
-| 📦 **Product Management**   | Create one-time and recurring billing plans with features and trial days      |
 | 👥 **Customer Management**  | Auto-creates customer profiles on payment; track lifetime value               |
 | 📊 **Transaction Tracking** | Full transaction history with status, gateway ref, and detail view            |
 | 💰 **Wallet & Payouts**     | Available balance, withdrawal requests, payout account management             |
