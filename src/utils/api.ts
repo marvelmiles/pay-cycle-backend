@@ -1,30 +1,24 @@
 import { Response } from "express";
+import { AppError } from "./AppError";
 
-export const serializeSuccessResponse = (data: any) => {
-  return {
-    data,
+export const sendSuccess = (
+  res: Response,
+  data: any,
+  message: string = "Success",
+  statusCode: number = 200,
+) => {
+  res.status(statusCode).json({
     success: true,
-  };
-};
-
-// could be a regular error or axios error
-export const serializeErrorResponse = (error: any) => {
-  if (error.success === false && typeof error.status === "number") return error;
-
-  const message = error.response?.data?.message || "Something went wrong.";
-
-  const status = error.response?.status || error.status || 500;
-
-  return {
-    success: false,
     message,
-    status,
-    errors: error.response?.data?.errors || [],
-  };
+    data,
+  });
 };
 
+// Deprecated in favor of global error handler
 export const createErrorResponse = (res: Response, error: any) => {
-  const err = serializeErrorResponse(error);
-
-  res.status(err.status).json(err);
+  const status = error.statusCode || 500;
+  res.status(status).json({
+    success: false,
+    message: error.message || "Something went wrong.",
+  });
 };

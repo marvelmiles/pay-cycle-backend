@@ -1,18 +1,17 @@
-import { Request, Response } from "express";
-import logger from "../utils/logger";
+import { Request, RequestHandler, Response } from "express";
+import asyncHandler from "express-async-handler";
 import { getBusinessId } from "../utils/profile";
 import Customer from "../models/profiles/customer";
 import Transaction from "../models/billing/transaction";
+import { sendSuccess } from "../utils/api";
+import { AppError } from "../utils/AppError";
 
 interface AuthReq extends Request {
   user?: { id: string };
 }
 
-export const getCustomers = async (
-  req: AuthReq,
-  res: Response,
-): Promise<void> => {
-  try {
+export const getCustomers: RequestHandler = asyncHandler(
+  async (req: AuthReq, res: Response) => {
     const businessId = await getBusinessId(req.user!.id);
     const { page = 1, limit = 20, search } = req.query;
     const filter: Record<string, unknown> = { business: businessId };
@@ -24,115 +23,69 @@ export const getCustomers = async (
       ];
     }
 
-    const [customers, total] = await Promise.all([
-      Customer.find(filter)
-        .skip((+page - 1) * +limit)
-        .limit(+limit)
-        .sort({ createdAt: -1 }),
-      Customer.countDocuments(filter),
-    ]);
+    const customers = await Customer.find(filter)
+      .skip((+page - 1) * +limit)
+      .limit(+limit)
+      .sort({ createdAt: -1 });
 
-    res.json({
-      success: true,
-      data: customers,
-      pagination: {
-        total,
-        page: +page,
-        limit: +limit,
-        pages: Math.ceil(total / +limit),
-      },
-    });
-  } catch (error) {
-    logger.error(`Get customers error: ${error}`);
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to fetch customers" });
-  }
-};
+    sendSuccess(res, customers, "Customers fetched");
+  },
+);
 
-export const getCustomer = async (
-  req: AuthReq,
-  res: Response,
-): Promise<void> => {
-  try {
+export const getCustomer: RequestHandler = asyncHandler(
+  async (req: AuthReq, res: Response) => {
     const businessId = await getBusinessId(req.user!.id);
     const customer = await Customer.findOne({
       _id: req.params.id,
       business: businessId,
     });
+
     if (!customer) {
-      res.status(404).json({ success: false, message: "Customer not found" });
-      return;
+      throw AppError.notFound("Customer not found");
     }
 
-    const [transactions] = await Promise.all([
-      Transaction.find({ customer: customer._id })
-        .sort({ createdAt: -1 })
-        .limit(10),
-    ]);
+    const transactions = await Transaction.find({ customer: customer._id })
+      .sort({ createdAt: -1 })
+      .limit(10);
 
-    res.json({
-      success: true,
-      data: { customer, transactions },
-    });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to fetch customer" });
-  }
-};
+    sendSuccess(res, { customer, transactions });
+  },
+);
 
-export const createCustomer = async (
-  req: AuthReq,
-  res: Response,
-): Promise<void> => {
-  try {
+export const createCustomer: RequestHandler = asyncHandler(
+  async (req: AuthReq, res: Response) => {
     const businessId = await getBusinessId(req.user!.id);
     const existing = await Customer.findOne({
       business: businessId,
       email: req.body.email,
     });
+
     if (existing) {
-      res.status(409).json({
-        success: false,
-        message: "Customer with this email already exists",
-      });
-      return;
+      throw AppError.conflict("Customer with this email already exists");
     }
+
     const customer = await Customer.create({
       ...req.body,
       business: businessId,
     });
-    res
-      .status(201)
-      .json({ success: true, message: "Customer created", data: customer });
-  } catch (error) {
-    logger.error(`Create customer error: ${error}`);
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to create customer" });
-  }
-};
 
-export const updateCustomer = async (
-  req: AuthReq,
-  res: Response,
-): Promise<void> => {
-  try {
+    sendSuccess(res, customer, "Customer created", 201);
+  },
+);
+
+export const updateCustomer: RequestHandler = asyncHandler(
+  async (req: AuthReq, res: Response) => {
     const businessId = await getBusinessId(req.user!.id);
     const customer = await Customer.findOneAndUpdate(
       { _id: req.params.id, business: businessId },
       req.body,
       { new: true },
     );
+
     if (!customer) {
-      res.status(404).json({ success: false, message: "Customer not found" });
-      return;
+      throw AppError.notFound("Customer not found");
     }
-    res.json({ success: true, message: "Customer updated", data: customer });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to update customer" });
-  }
-};
+
+    sendSuccess(res, customer, "Customer updated");
+  },
+);

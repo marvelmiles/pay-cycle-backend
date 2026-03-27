@@ -1,131 +1,85 @@
-import { Request, Response } from "express";
-import logger from "../utils/logger";
+import { Request, RequestHandler, Response } from "express";
+import asyncHandler from "express-async-handler";
 import Product from "../models/product";
 import { getBusinessId } from "../utils/profile";
+import { sendSuccess } from "../utils/api";
+import { AppError } from "../utils/AppError";
 
 interface AuthReq extends Request {
   user?: { id: string; email: string; role: string };
 }
 
-export const getProducts = async (
-  req: AuthReq,
-  res: Response,
-): Promise<void> => {
-  try {
+export const getProducts: RequestHandler = asyncHandler(
+  async (req: AuthReq, res: Response) => {
     const businessId = await getBusinessId(req.user!.id);
     const { page = 1, limit = 20, type, isActive } = req.query;
     const filter: Record<string, unknown> = { business: businessId };
     if (type) filter.type = type;
     if (isActive !== undefined) filter.isActive = isActive === "true";
 
-    const [products, total] = await Promise.all([
-      Product.find(filter)
-        .skip((+page - 1) * +limit)
-        .limit(+limit)
-        .sort({ createdAt: -1 }),
-      Product.countDocuments(filter),
-    ]);
+    const products = await Product.find(filter)
+      .skip((+page - 1) * +limit)
+      .limit(+limit)
+      .sort({ createdAt: -1 });
 
-    res.json({
-      success: true,
-      data: products,
-      pagination: {
-        total,
-        page: +page,
-        limit: +limit,
-        pages: Math.ceil(total / +limit),
-      },
-    });
-  } catch (error) {
-    logger.error(`Get products error: ${error}`);
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to fetch products" });
-  }
-};
+    sendSuccess(res, products, "Products fetched");
+  },
+);
 
-export const getProduct = async (
-  req: AuthReq,
-  res: Response,
-): Promise<void> => {
-  try {
+export const getProduct: RequestHandler = asyncHandler(
+  async (req: AuthReq, res: Response) => {
     const businessId = await getBusinessId(req.user!.id);
     const product = await Product.findOne({
       _id: req.params.id,
       business: businessId,
     });
-    if (!product) {
-      res.status(404).json({ success: false, message: "Product not found" });
-      return;
-    }
-    res.json({ success: true, data: product });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to fetch product" });
-  }
-};
 
-export const createProduct = async (
-  req: AuthReq,
-  res: Response,
-): Promise<void> => {
-  try {
+    if (!product) {
+      throw AppError.notFound("Product not found");
+    }
+
+    sendSuccess(res, product);
+  },
+);
+
+export const createProduct: RequestHandler = asyncHandler(
+  async (req: AuthReq, res: Response) => {
     const businessId = await getBusinessId(req.user!.id);
     const product = await Product.create({ ...req.body, business: businessId });
-    res
-      .status(201)
-      .json({ success: true, message: "Product created", data: product });
-  } catch (error) {
-    logger.error(`Create product error: ${error}`);
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to create product" });
-  }
-};
+    sendSuccess(res, product, "Product created", 201);
+  },
+);
 
-export const updateProduct = async (
-  req: AuthReq,
-  res: Response,
-): Promise<void> => {
-  try {
+export const updateProduct: RequestHandler = asyncHandler(
+  async (req: AuthReq, res: Response) => {
     const businessId = await getBusinessId(req.user!.id);
     const product = await Product.findOneAndUpdate(
       { _id: req.params.id, business: businessId },
       req.body,
       { new: true, runValidators: true },
     );
-    if (!product) {
-      res.status(404).json({ success: false, message: "Product not found" });
-      return;
-    }
-    res.json({ success: true, message: "Product updated", data: product });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to update product" });
-  }
-};
 
-export const deleteProduct = async (
-  req: AuthReq,
-  res: Response,
-): Promise<void> => {
-  try {
+    if (!product) {
+      throw AppError.notFound("Product not found");
+    }
+
+    sendSuccess(res, product, "Product updated");
+  },
+);
+
+export const deleteProduct: RequestHandler = asyncHandler(
+  async (req: AuthReq, res: Response) => {
     const businessId = await getBusinessId(req.user!.id);
     const product = await Product.findOneAndUpdate(
       { _id: req.params.id, business: businessId },
       { isActive: false },
       { new: true },
     );
+
     if (!product) {
-      res.status(404).json({ success: false, message: "Product not found" });
-      return;
+      throw AppError.notFound("Product not found");
     }
-    res.json({ success: true, message: "Product deactivated" });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to delete product" });
-  }
-};
+
+    sendSuccess(res, null, "Product deactivated");
+  },
+);

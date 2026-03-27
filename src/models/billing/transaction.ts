@@ -40,7 +40,6 @@ const TransactionSchema = new Schema<ITransactionDoc>(
 );
 
 TransactionSchema.index({ business: 1, createdAt: -1 });
-TransactionSchema.index({ reference: 1 });
 
 const Transaction = mongoose.model<ITransactionDoc>(
   "Transaction",

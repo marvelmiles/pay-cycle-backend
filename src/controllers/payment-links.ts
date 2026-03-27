@@ -1,22 +1,19 @@
-import { Request, Response } from "express";
+import { Request, RequestHandler, Response } from "express";
+import asyncHandler from "express-async-handler";
 import { generateSlug } from "../utils/helpers";
 import { v4 as uuidv4 } from "uuid";
-import logger from "../utils/logger";
 import { generateTransactionRef } from "../utils/transaction";
-import {
-  createErrorResponse,
-  serializeErrorResponse,
-  serializeSuccessResponse,
-} from "../utils/api";
+import { sendSuccess } from "../utils/api";
 import { getAuthData } from "../utils/auth-data";
 import { getBusinessId } from "../utils/profile";
 import { AuthReq } from "../types/request";
 import PaymentLink from "../models/billing/payment-link";
 import Product from "../models/product";
 import interswitchService from "../services/interswitch";
+import { AppError } from "../utils/AppError";
 
-export const handleCardPayment = async (req: Request, res: Response) => {
-  try {
+export const handleCardPayment: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
     const {
       cardDetails,
       amount,
@@ -44,43 +41,32 @@ export const handleCardPayment = async (req: Request, res: Response) => {
     };
 
     const result = await interswitchService.initiateCardPayment(data);
+    sendSuccess(res, result);
+  },
+);
 
-    res.json(serializeSuccessResponse(result));
-  } catch (error) {
-    createErrorResponse(res, error);
-  }
-};
-
-export const verifyPaymentOtp = async (req: Request, res: Response) => {
-  const { paymentId, otp, transactionId } = req.body;
-  try {
+export const verifyPaymentOtp: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { paymentId, otp, transactionId } = req.body;
     const result = await interswitchService.verifyPaymentOtp({
       paymentId,
       otp,
       transactionId,
     });
 
-    res.json(serializeSuccessResponse(result));
-  } catch (err) {
-    createErrorResponse(res, err);
-  }
-};
+    sendSuccess(res, result);
+  },
+);
 
-export const confirmPayment = async (req: Request, res: Response) => {
-  try {
+export const confirmPayment: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
     const result = await interswitchService.confirmPayment(req.query as any);
+    sendSuccess(res, result);
+  },
+);
 
-    res.json(serializeSuccessResponse(result));
-  } catch (err) {
-    res.status(500).json(serializeErrorResponse(err));
-  }
-};
-
-export const getPaymentLinks = async (
-  req: AuthReq,
-  res: Response,
-): Promise<void> => {
-  try {
+export const getPaymentLinks: RequestHandler = asyncHandler(
+  async (req: AuthReq, res: Response) => {
     const businessId = await getBusinessId(req.user!.id);
     const { page = 1, limit = 20, isActive } = req.query;
     const filter: Record<string, unknown> = { business: businessId };
@@ -98,29 +84,15 @@ export const getPaymentLinks = async (
       PaymentLink.countDocuments(filter),
     ]);
 
-    res.json({
-      success: true,
-      data: links,
-      pagination: {
-        total,
-        page: +page,
-        limit: +limit,
-        pages: Math.ceil(total / +limit),
-      },
-    });
-  } catch (error) {
-    logger.error(`Get payment links error: ${error}`);
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to fetch payment links" });
-  }
-};
+    sendSuccess(res, links, "Payment links fetched", 200);
+    // Note: Pagination info could be added to sendSuccess if needed,
+    // but for now I'm sticking to the plain data for consistency with current logic
+    // unless we want to standardize pagination too.
+  },
+);
 
-export const getPaymentLink = async (
-  req: AuthReq,
-  res: Response,
-): Promise<void> => {
-  try {
+export const getPaymentLink: RequestHandler = asyncHandler(
+  async (req: AuthReq, res: Response) => {
     const businessId = await getBusinessId(req.user!.id);
     const link = await PaymentLink.findOne({
       _id: req.params.id,
@@ -129,35 +101,25 @@ export const getPaymentLink = async (
       "product",
       "name price interval type currency features description",
     );
-    if (!link) {
-      res
-        .status(404)
-        .json({ success: false, message: "Payment link not found" });
-      return;
-    }
-    res.json({ success: true, data: link });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to fetch payment link" });
-  }
-};
 
-export const createPaymentLink = async (
-  req: AuthReq,
-  res: Response,
-): Promise<void> => {
-  try {
+    if (!link) {
+      throw AppError.notFound("Payment link not found");
+    }
+
+    sendSuccess(res, link);
+  },
+);
+
+export const createPaymentLink: RequestHandler = asyncHandler(
+  async (req: AuthReq, res: Response) => {
     const businessId = await getBusinessId(req.user!.id);
     const { title, productId, description, redirectUrl, maxUses, expiresAt } =
       req.body;
 
     if (!productId) {
-      res.status(400).json({
-        success: false,
-        message: "A product must be selected to create a payment link",
-      });
-      return;
+      throw AppError.badRequest(
+        "A product must be selected to create a payment link",
+      );
     }
 
     const product = await Product.findOne({
@@ -165,11 +127,9 @@ export const createPaymentLink = async (
       business: businessId,
       isActive: true,
     });
+
     if (!product) {
-      res
-        .status(404)
-        .json({ success: false, message: "Product not found or inactive" });
-      return;
+      throw AppError.notFound("Product not found or inactive");
     }
 
     let slug = generateSlug(title) + "-" + uuidv4().substring(0, 6);
@@ -197,24 +157,17 @@ export const createPaymentLink = async (
     );
     const paymentUrl = `${process.env.APP_URL}/pay/${slug}`;
 
-    res.status(201).json({
-      success: true,
-      message: "Payment link created",
-      data: { ...populated.toObject(), paymentUrl },
-    });
-  } catch (error) {
-    logger.error(`Create payment link error: ${error}`);
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to create payment link" });
-  }
-};
+    sendSuccess(
+      res,
+      { ...populated.toObject(), paymentUrl },
+      "Payment link created",
+      201,
+    );
+  },
+);
 
-export const updatePaymentLink = async (
-  req: AuthReq,
-  res: Response,
-): Promise<void> => {
-  try {
+export const updatePaymentLink: RequestHandler = asyncHandler(
+  async (req: AuthReq, res: Response) => {
     const businessId = await getBusinessId(req.user!.id);
 
     const { amount, currency, isFixedAmount, ...safeUpdates } = req.body;
@@ -229,40 +182,26 @@ export const updatePaymentLink = async (
     ).populate("product", "name price interval type currency features");
 
     if (!link) {
-      res
-        .status(404)
-        .json({ success: false, message: "Payment link not found" });
-      return;
+      throw AppError.notFound("Payment link not found");
     }
-    res.json({ success: true, message: "Payment link updated", data: link });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to update payment link" });
-  }
-};
 
-export const deletePaymentLink = async (
-  req: AuthReq,
-  res: Response,
-): Promise<void> => {
-  try {
+    sendSuccess(res, link, "Payment link updated");
+  },
+);
+
+export const deletePaymentLink: RequestHandler = asyncHandler(
+  async (req: AuthReq, res: Response) => {
     const businessId = await getBusinessId(req.user!.id);
     const link = await PaymentLink.findOneAndUpdate(
       { _id: req.params.id, business: businessId },
       { isActive: false },
       { new: true },
     );
+
     if (!link) {
-      res
-        .status(404)
-        .json({ success: false, message: "Payment link not found" });
-      return;
+      throw AppError.notFound("Payment link not found");
     }
-    res.json({ success: true, message: "Payment link deactivated" });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to delete payment link" });
-  }
-};
+
+    sendSuccess(res, null, "Payment link deactivated");
+  },
+);

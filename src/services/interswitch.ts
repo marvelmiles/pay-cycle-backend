@@ -37,11 +37,11 @@ class InterswitchService {
     try {
       const credentials =
         credentialType === "interswitch"
-          ? "SUtJQUIyM0E0RTI3NTY2MDVDMUFCQzMzQ0UzQzI4N0UyNzI2N0Y2NjBENjE6c2VjcmV0"
-          : "SUtJQTI2NzQyNjdGN0JDOUZGOUVGMjRFRjdBOTU0NDYyRERGQ0MxN0JCRjc6SW0yX0Z3dXN0ellHdlFL";
+          ? process.env.INTERSWITCH_CREDENTIALS_INTERSWITCH
+          : process.env.INTERSWITCH_CREDENTIALS_CUSTOM;
 
       const response = await axios.post(
-        `https://passport-v2.k8.isw.la/passport/oauth/token?grant_type=client_credentials`,
+        `${process.env.INTERSWITCH_PASSPORT_URL}?grant_type=client_credentials`,
         {},
         {
           headers: {
@@ -168,7 +168,7 @@ class InterswitchService {
 
       if (payload.paymentType === "recurring") {
         const tr = await axios.post(
-          "https://qa.interswitchng.com/api/v3/purchases/validations/recurrents",
+          `${process.env.INTERSWITCH_API_BASE_URL}/purchases/validations/recurrents`,
           {
             transactionRef: payload.transactionRef,
             authData: payload.authData,
@@ -185,7 +185,7 @@ class InterswitchService {
         const tokenExpiryDate = tr.data.tokenExpiryDate;
 
         const pr = await axios.post(
-          "https://qa.interswitchng.com/api/v3/purchases/recurrents",
+          `${process.env.INTERSWITCH_API_BASE_URL}/purchases/recurrents`,
           {
             customerId: payload.customerId,
             amount: payload.amount,
@@ -203,7 +203,7 @@ class InterswitchService {
       }
 
       const response = await axios.post(
-        `https://qa.interswitchng.com/api/v3/purchases`,
+        `${process.env.INTERSWITCH_API_BASE_URL}/purchases`,
         payload,
         {
           headers: await this.createHeaders(),
@@ -246,7 +246,7 @@ class InterswitchService {
   }> {
     try {
       const response = await axios.post(
-        "https://qa.interswitchng.com/api/v3/purchases/otps/auths",
+        `${process.env.INTERSWITCH_API_BASE_URL}/purchases/otps/auths`,
         payload,
         {
           headers: await this.createHeaders(),
@@ -290,13 +290,12 @@ class InterswitchService {
   }> {
     try {
       const response = await axios.get(
-        "https://qa.interswitchng.com/collections/api/v1/gettransaction",
+        `${process.env.INTERSWITCH_COLLECTIONS_BASE_URL}/gettransaction`,
         {
           params: {
             transactionreference: payload.trxRef,
             amount: Number(payload.amount) * 100,
-            // for some reason using env response returns not found
-            merchantcode: "MX275886", // process.env.INTERSWITCH_MERCHANT_CODE,
+            merchantcode: process.env.INTERSWITCH_MERCHANT_CODE,
           },
           headers: await this.createHeaders(),
         },
