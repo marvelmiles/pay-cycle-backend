@@ -4,6 +4,7 @@ import User from "../models/profiles/user";
 import Business from "../models/business";
 import { AuthReq } from "../types/request";
 import { uploadToCloudinary } from "../utils/stream";
+import { getBusinessPublicData, getUserPublicData } from "../utils/profile";
 
 export const getProfile = async (
   req: Request & { user?: { id: string } },
@@ -20,21 +21,8 @@ export const getProfile = async (
     res.json({
       success: true,
       data: {
-        user: {
-          id: user._id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          role: user.role,
-        },
-        business: business
-          ? {
-              id: business._id,
-              name: business.name,
-              slug: business.slug,
-              settings: business.settings,
-            }
-          : null,
+        user: getUserPublicData(user),
+        business: getBusinessPublicData(business, true),
       },
     });
   } catch (error) {
@@ -60,19 +48,22 @@ export const updateProfile = async (req: AuthReq, res: Response) => {
       fileObj = await uploadToCloudinary(req.file.buffer);
     }
 
-    await User.updateOne(
-      {
-        _id: user._id,
-      },
+    const newUser = await User.findByIdAndUpdate(
+      user._id,
+
       {
         firstName: req.body.firstName || user.firstName,
         lastName: req.body.lastName || user.lastName,
         image: fileObj?.secure_url || user.image,
       },
+      {
+        new: true,
+      },
     );
 
     res.json({
       success: true,
+      data: newUser,
       message: "Profile updated successfully",
     });
   } catch (err) {
@@ -82,7 +73,7 @@ export const updateProfile = async (req: AuthReq, res: Response) => {
 
 export const updateProfileBussiness = async (req: AuthReq, res: Response) => {
   try {
-    const business = await Business.findOne({ owner: req.user?.id });
+    const business = await Business.findById(req.params.id);
 
     if (!business) {
       res.status(404).json({
@@ -98,19 +89,20 @@ export const updateProfileBussiness = async (req: AuthReq, res: Response) => {
       fileObj = await uploadToCloudinary(req.file.buffer);
     }
 
-    await Business.updateOne(
-      {
-        owner: req.user?.id,
-      },
+    const newBusiness = await Business.findByIdAndUpdate(
+      req.params.id,
       {
         name: req.body.name || business.name,
         slug: req.body.slug || business.slug,
         image: fileObj?.secure_url || business.image,
+        bank: req.body.bank || business.bank,
       },
+      { new: true },
     );
 
     res.json({
       success: true,
+      data: newBusiness,
       message: "Business account updated successfully",
     });
   } catch (err) {

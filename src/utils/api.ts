@@ -8,6 +8,17 @@ export const serializeSuccessResponse = (data: any) => {
   };
 };
 
+export const getErrorDetails = (error: any, stringify = true) => {
+  const err = {
+    data: error.response?.data,
+    status: error.response?.status,
+    message: error.response?.data?.message || error.message,
+    statusCode: error.status || error.statusCode,
+  };
+
+  return stringify ? JSON.stringify(err) : err;
+};
+
 // could be a regular error or axios error
 export const serializeErrorResponse = (error: any) => {
   if (error.success === false && typeof error.status === "number") return error;
@@ -27,13 +38,13 @@ export const serializeErrorResponse = (error: any) => {
 export const createErrorResponse = (
   res: Response,
   error: any,
-  withLoger = true,
+  config?: { withLogger?: boolean; logMsg?: string },
 ) => {
+  const { withLogger = true, logMsg = "Error response" } = config || {};
+
   const err = serializeErrorResponse(error);
 
-  if (withLoger || process.env.NODE_ENV !== "production") {
-    logger.error(`Error Response: ${err.message}`);
-  }
+  if (withLogger) logger.error(`${logMsg}: ${getErrorDetails(error)}`);
 
   res.status(err.status).json(err);
 };

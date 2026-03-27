@@ -3,6 +3,8 @@ import logger from "../utils/logger";
 import Customer, { ICustomerDoc } from "../models/profiles/customer";
 import Transaction from "../models/billing/transaction";
 import { IProductDoc } from "../models/product";
+import Business from "../models/business";
+import { getErrorDetails } from "../utils/api";
 
 interface CardPaymentData {
   amount: string;
@@ -37,8 +39,8 @@ class InterswitchService {
     try {
       const credentials =
         credentialType === "interswitch"
-          ? "SUtJQUIyM0E0RTI3NTY2MDVDMUFCQzMzQ0UzQzI4N0UyNzI2N0Y2NjBENjE6c2VjcmV0"
-          : "SUtJQTI2NzQyNjdGN0JDOUZGOUVGMjRFRjdBOTU0NDYyRERGQ0MxN0JCRjc6SW0yX0Z3dXN0ellHdlFL";
+          ? process.env.INTERSWITCH_PROVIDER_ENCODED_VALUE
+          : process.env.INTERSWITCH_MERCHANT_ENCODED_VALUE;
 
       const response = await axios.post(
         `https://passport-v2.k8.isw.la/passport/oauth/token?grant_type=client_credentials`,
@@ -57,8 +59,7 @@ class InterswitchService {
       );
       return this.accessToken!;
     } catch (error: any) {
-      console.log(error.response?.data, error.response?.status);
-      logger.error(`Interswitch auth error: ${error}`);
+      logger.error(`Interswitch auth error: ${getErrorDetails(error)}`);
       throw new Error("Failed to authenticate with Interswitch");
     }
   }
@@ -110,6 +111,14 @@ class InterswitchService {
     await Customer.findByIdAndUpdate(transaction.customer, {
       $inc: { totalSpent: transaction.amount },
     });
+
+    const business = await Business.findById(businessId);
+
+    if (business) {
+      await business.updateOne({
+        availableBalance: (business.availableBalance || 0) + transaction.amount,
+      });
+    }
   }
 
   async initiateCardPayment(payload: CardPaymentData): Promise<{
@@ -211,8 +220,6 @@ class InterswitchService {
       );
       return await handleResponse(response);
     } catch (error: any) {
-      console.log(error.response?.data, error.response?.status);
-
       if (trxId) {
         await Transaction.updateOne(
           {
@@ -265,8 +272,9 @@ class InterswitchService {
         cardType: response.data.cardType || "",
       };
     } catch (error: any) {
-      console.log(error.response?.data, error.response?.status);
-      logger.error(`Interswitch verify payment otp error: ${error}`);
+      logger.error(
+        `Interswitch verify payment otp error: ${getErrorDetails(error)}`,
+      );
 
       throw error;
     }

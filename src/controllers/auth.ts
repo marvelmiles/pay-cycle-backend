@@ -4,6 +4,7 @@ import { generateSlug } from "../utils/helpers";
 import logger from "../utils/logger";
 import User from "../models/profiles/user";
 import Business from "../models/business";
+import { getBusinessPublicData, getUserPublicData } from "../utils/profile";
 
 const generateTokens = (userId: string, email: string, role: string) => {
   const accessToken = jwt.sign(
@@ -114,16 +115,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       success: true,
       message: "Login successful",
       data: {
-        user: {
-          id: user._id,
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          role: user.role,
-        },
-        business: business
-          ? { id: business._id, name: business.name, slug: business.slug }
-          : null,
+        user: getUserPublicData(user),
+        business: getBusinessPublicData(business, true),
         accessToken,
         refreshToken,
       },

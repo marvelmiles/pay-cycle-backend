@@ -19,6 +19,13 @@ export interface IBusinessDoc extends Document {
     webhookSecret?: string;
   };
   image?: string;
+  withdrawableAmount: number;
+  availableBalance: number;
+  bank?: {
+    name: string;
+    accountNumber: string;
+    accountName: string;
+  };
 }
 
 const BusinessSchema = new Schema<IBusinessDoc>(
@@ -41,6 +48,19 @@ const BusinessSchema = new Schema<IBusinessDoc>(
       webhookSecret: { type: String },
     },
     image: String,
+    withdrawableAmount: {
+      type: Number,
+      default: 0,
+    },
+    availableBalance: {
+      type: Number,
+      default: 0,
+    },
+    bank: {
+      name: String,
+      accountNumber: String,
+      accountName: String,
+    },
   },
   { timestamps: true },
 );

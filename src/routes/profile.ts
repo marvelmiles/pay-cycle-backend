@@ -19,9 +19,10 @@ profileRouter.put(
 );
 
 profileRouter.put(
-  "/profile/business",
+  "/profile/business/:id",
   authenticate,
   upload.single("image"),
   updateProfileBussiness,
 );
+
 export default profileRouter;
