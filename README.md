@@ -24,6 +24,8 @@ Built on top of **Interswitch** as the payment gateway, PayCycle handles the ful
 
 **Endpoint breakdown** is documented at the end of the file
 
+Please read our **Limitation & Blocker** section with interswitch documentation.
+
 ---
 
 ## ✨ Features
