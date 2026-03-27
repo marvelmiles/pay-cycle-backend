@@ -28,7 +28,7 @@ Please read our **Limitation & Blocker** section with interswitch documentation.
 
 ---
 
-## ✨ Features
+## Features
 
 | Feature                     | Description                                                                   |
 | --------------------------- | ----------------------------------------------------------------------------- |
