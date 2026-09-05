@@ -2,12 +2,13 @@
 
 <img src="https://img.shields.io/badge/PayCycle-Payment%20Platform-2563EB?style=for-the-badge&logo=lightning&logoColor=white" alt="PayCycle" />
 
-# PayCycle
+# PayCycle API
 
-**The fastest way for Nigerian businesses to create checkout links, collect payments, and manage billing — all in one place.**
+**The fastest way for Nigerian businesses to create checkout links, collect payments, and manage billing, all in one place.**
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-pay--cycle.netlify.app-2563EB?style=flat-square&logo=netlify)](https://pay-cycle.netlify.app/)
 [![Backend API](https://img.shields.io/badge/Backend%20API-Render-00C7B7?style=flat-square&logo=render)](https://pay-cycle-backend.onrender.com)
+[![API Docs](https://img.shields.io/badge/API%20Docs-Swagger-85EA2D?style=flat-square&logo=swagger&logoColor=black)](https://pay-cycle-backend.onrender.com/docs)
 [![Frontend Repo](https://img.shields.io/badge/Frontend-GitHub-181717?style=flat-square&logo=github)](https://github.com/marvelmiles/pay-cycle)
 [![Backend Repo](https://img.shields.io/badge/Backend-GitHub-181717?style=flat-square&logo=github)](https://github.com/marvelmiles/pay-cycle-backend)
 [![Built with Interswitch](https://img.shields.io/badge/Payments-Interswitch-003B71?style=flat-square)](https://developer.interswitchgroup.com)
@@ -16,172 +17,331 @@
 
 ---
 
-## 📖 Overview
+## Overview
 
-PayCycle is a business billing and payment management platform built for the Nigerian market. It allows business owners to create shareable checkout payment links for their products and collect one-time payments — without writing a single line of code. Developers can also integrate via API and SDK for full-code experiences.
+PayCycle is a business billing and payment management platform built for the Nigerian market. A business owner signs up, creates a product, generates a shareable checkout link, and starts collecting card payments without writing a line of gateway code. Developers can integrate the same capabilities directly through this REST API.
 
-Built on top of **Interswitch** as the payment gateway, PayCycle handles the full payment lifecycle: from creating a product, generating a checkout link, collecting card details with OTP verification, recording transactions, and managing payouts — all within a single, branded dashboard.
+The platform is built on **Interswitch** as the payment gateway and covers the full payment lifecycle: creating a product, generating a checkout link, collecting card details with OTP verification, recording transactions, tracking customers, and managing payouts, all from a single branded dashboard.
 
-We removed subscription features due to limitation and blockers encountered during development.
+Subscription management was removed from the shipped product because of gateway blockers. Read the [Limitations and blockers](#limitations-and-blockers) section for details.
 
-Please read our **Limitation & Blocker** section for more details
+---
 
-**Endpoint breakdown** is documented at the end of the file
+## Links
+
+| Resource            | URL                                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Frontend (live)     | [https://pay-cycle.netlify.app](https://pay-cycle.netlify.app/)                                              |
+| Backend server      | [https://pay-cycle-backend.onrender.com](https://pay-cycle-backend.onrender.com)                             |
+| API documentation   | [https://pay-cycle-backend.onrender.com/docs](https://pay-cycle-backend.onrender.com/docs)                   |
+| OpenAPI spec (JSON) | [https://pay-cycle-backend.onrender.com/docs.json](https://pay-cycle-backend.onrender.com/docs.json)         |
+| Frontend repository | [github.com/marvelmiles/pay-cycle](https://github.com/marvelmiles/pay-cycle)                                 |
+| Backend repository  | [github.com/marvelmiles/pay-cycle-backend](https://github.com/marvelmiles/pay-cycle-backend)                 |
+
+### API base URL
+
+| Environment | Base URL                                        |
+| ----------- | ----------------------------------------------- |
+| Production  | `https://pay-cycle-backend.onrender.com/api/v1` |
+| Local       | `http://localhost:5000/api/v1`                  |
+
+Every documented path is relative to the base URL, so a product listing is `GET {base URL}/products`.
+
+---
+
+## API documentation
+
+Interactive Swagger UI is served by the API itself:
+
+- Production: [https://pay-cycle-backend.onrender.com/docs](https://pay-cycle-backend.onrender.com/docs)
+- Local: [http://localhost:5000/docs](http://localhost:5000/docs)
+
+What frontend developers get there:
+
+- Every endpoint grouped by feature, with request bodies, query parameters, response schemas and error codes.
+- A **Servers** dropdown that defaults to the environment the docs are served from. Open the docs on localhost and requests go to localhost, open them on the deployed API and they go to production.
+- **Try it out** on every endpoint, so a call can be run from the browser before any code is written.
+- Ready made login examples for each test account. Sign in from the page and the returned access token is captured and applied to every protected endpoint automatically, no copy and paste needed.
+- The raw OpenAPI 3 document at `/docs.json`, which can be fed to a client generator such as `openapi-typescript` or Orval.
+
+---
+
+## Test accounts
+
+Run `pnpm seed` to create these accounts, then sign in from the docs page or from the app. Every account uses the same password.
+
+| Account              | Business              | Email                  | Password        | What is seeded                                                                                                            |
+| -------------------- | --------------------- | ---------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Established merchant | Lagos Coffee Roasters | `demo@paycycle.test`   | `PayCycle@2025` | Six months of transaction history, 4 products, 3 payment links, 8 customers, a funded wallet and settled payouts            |
+| New merchant         | Balogun Studio        | `starter@paycycle.test`| `PayCycle@2025` | A freshly registered business with no products, customers or transactions, for building and checking empty states           |
+| Payout heavy merchant| Kano Textiles         | `payouts@paycycle.test`| `PayCycle@2025` | High transaction volume plus pending, successful, rejected and cancelled withdrawals and a saved payout account            |
+
+Signing in with any of them:
+
+```bash
+curl -X POST http://localhost:5000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"demo@paycycle.test","password":"PayCycle@2025"}'
+```
+
+The response carries `data.accessToken`. Send it on protected endpoints as `Authorization: Bearer <accessToken>`.
+
+---
+
+## Seeding test data
+
+```bash
+pnpm seed
+```
+
+The script connects with `MONGODB_URI`, removes the three test businesses and everything attached to them, then rebuilds users, businesses, products, payment links, customers, transactions and withdrawals, and prints a summary with each business id and balance.
+
+It is safe to run repeatedly. It only touches the three seeded accounts and never deletes other records, so it can be used to reset to a known state at any point. Transactions are generated from a fixed random seed and backdated across calendar months, which keeps the dashboard, the revenue chart and the customer cohorts consistent from run to run.
 
 ---
 
 ## Features
 
-| Feature                     | Description                                                                   |
-| --------------------------- | ----------------------------------------------------------------------------- |
-| 🔗 **Payment Links**        | Generate shareable checkout URLs tied to a product — no code required         |
-| 💳 **Checkout Page**        | Branded 3-step payment flow: customer details → card entry → OTP verification |
-| 👥 **Customer Management**  | Auto-creates customer profiles on payment; track lifetime value               |
-| 📊 **Transaction Tracking** | Full transaction history with status, gateway ref, and detail view            |
-| 💰 **Wallet & Payouts**     | Available balance, withdrawal requests, payout account management             |
-| 📈 **Analytics Dashboard**  | Revenue charts, Montly Revenue, Transaction stats, payment success rate       |
-| 🔐 **JWT Authentication**   | Secure login, registration, and refresh token support                         |
+| Feature              | Description                                                                       |
+| -------------------- | --------------------------------------------------------------------------------- |
+| Payment links        | Generate shareable checkout URLs tied to a product, no code required               |
+| Checkout             | Three step payment flow: customer details, card entry, OTP verification            |
+| Customer management  | Customer profiles created automatically on payment, with lifetime value tracking   |
+| Transaction tracking | Full transaction history with status, gateway reference and detail view            |
+| Wallet and payouts   | Available balance, withdrawal requests and payout account management               |
+| Analytics            | Revenue charts, monthly revenue, transaction stats and payment success rate        |
+| Authentication       | JWT access and refresh tokens with rotation on refresh                             |
+| API reference        | Swagger UI and an OpenAPI 3 document served by the API                             |
 
 ---
 
-## ⚠️ Limitations & Blockers
+## Tech stack
 
-**NOTE**: Issues and blocker was escalated on the slack group. The issues below are issues the support team couldn't attend to before submittion.
-
-**Test Credentials**
-
-The payment system is built on test credentials. We submitted a complaint, filled live credentials request form created by the support team but couldn't get the live credentials from the support team on slack before submittion.
-
-Approval was gotten from the support team to go ahead and submit with test credentials.
-
-**Card Payment APi**
-
-- Card api endpoint (https://qa.interswitchng.com/api/v3/purchases) isn't stable as of 3PM deadline day. The endpoint returns 500 server error which will cause the checkout payment flow to show an error message. My team can't refactor or pivot from what we have implemented and hope the support team fix this error before judges review.
-
-**Subscription management UI was not shipped** due to the following blockers encountered during development:
-
-- The Interswitch API did not expose endpoints for **pausing**, **resuming**, and **cancelling** subscriptions at the time of development.
-- The recurring charges feature was implemented and tested on the **backend**, but could not be integrated end-to-end on the frontend without those gateway endpoints.
-- endpint to charge recurring payment throws **server error** https://qa.interswitchng.com/api/v3/purchases/recurrents
-- As a result, all subscription-related UI (subscription list, cancel/pause/resume actions) was removed from the shipped version to avoid presenting broken features.
-
-**The following is fully functional:**
-
-- One-time payment checkout via payment links ✅
-- Transaction recording and tracking ✅
-- Wallet and payout management ✅
+| Technology           | Purpose                     |
+| -------------------- | --------------------------- |
+| Node.js + TypeScript | Runtime and type safety     |
+| Express              | HTTP server and routing     |
+| MongoDB + Mongoose   | Database and ODM            |
+| Interswitch          | Card payment gateway        |
+| Cloudinary           | File upload and storage     |
+| JWT                  | Authentication              |
+| Swagger UI + OpenAPI | API documentation           |
+| Winston              | Structured logging          |
+| Helmet + rate limit  | Baseline hardening          |
 
 ---
 
-## 🖥️ Tech Stack
-
-### Key Backend Technology
-
-| Technology           | Purpose                    |
-| -------------------- | -------------------------- |
-| Node.js + TypeScript | Runtime & type safety      |
-| Express              | HTTP server & routing      |
-| MongoDB + Mongoose   | Database & ODM             |
-| Cloudinary           | file uploading and storage |
-| JWT                  | Authentication             |
-
----
-
-## 🚀 Live Links
-
-| Resource           | URL                                                                                          |
-| ------------------ | -------------------------------------------------------------------------------------------- |
-| 🌐 Frontend (Live) | [https://pay-cycle.netlify.app](https://pay-cycle.netlify.app/)                              |
-| ⚙️ Backend API     | [https://pay-cycle-backend.onrender.com](https://pay-cycle-backend.onrender.com)             |
-| 📁 Frontend Repo   | [github.com/marvelmiles/pay-cycle](https://github.com/marvelmiles/pay-cycle)                 |
-| 📁 Backend Repo    | [github.com/marvelmiles/pay-cycle-backend](https://github.com/marvelmiles/pay-cycle-backend) |
-
----
-
-## ⚙️ Installation & Setup
+## Getting started
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) >= 18
-- [pnpm](https://pnpm.io/) >= 8 — install globally if you haven't:
+- [Node.js](https://nodejs.org/) 18 or newer
+- [pnpm](https://pnpm.io/) 8 or newer
+- A MongoDB database, either local or MongoDB Atlas
 
 ```bash
 npm install -g pnpm
 ```
 
----
-
-### 1. Clone the Repository
+### 1. Clone and install
 
 ```bash
-# Clone the backend (separate repo)
 git clone https://github.com/marvelmiles/pay-cycle-backend.git
 cd pay-cycle-backend
-
-# Install
-
 pnpm install
-
-# Create env file in root folder with key pair values
-
 ```
 
-Open `.env` and fill in your values:
+### 2. Configure the environment
 
-```env
-# Interswitch Payment Gateway
-NODE_ENV=development
-PORT=5000
-
-MONGODB_URI=""
-
-JWT_SECRET=""
-JWT_EXPIRES_IN=7d
-JWT_REFRESH_SECRET=""
-JWT_REFRESH_EXPIRES_IN=30d
-
-INTERSWITCH_CLIENT_ID=""
-INTERSWITCH_CLIENT_SECRET=""
-INTERSWITCH_BASE_URL=https://sandbox.interswitchng.com
-INTERSWITCH_PASSPORT_URL=https://passport.interswitchng.com
-INTERSWITCH_PAYABLE_CODE=Default_Payable_{{MERCHANT_CODE}}
-INTERSWITCH_MERCHANT_CODE={{MERCHANT_CODE}}
-INTERSWITCH_PROVIDER_ENCODED_VALUE=""
-INTERSWITCH_MERCHANT_ENCODED_VALUE=""
-
-APP_NAME=Paycycle
-APP_URL=https://pay-cycle.netlify.app
-API_URL=https://pay-cycle-backend.onrender.com/api/v1
-
-CLOUDINARY_CLOUD_NAME=""
-CLOUDINARY_API_KEY=""
-CLOUDINARY_API_SECRET=""
-
+```bash
+cp .env.example .env
 ```
 
-Start the development server:
+Fill in the values described in [Environment variables](#environment-variables). At minimum `MONGODB_URI`, `JWT_SECRET` and `JWT_REFRESH_SECRET` are needed to boot.
+
+### 3. Seed the test data
+
+```bash
+pnpm seed
+```
+
+### 4. Run
 
 ```bash
 pnpm dev
 ```
 
-The app will be available at **http://localhost:5000**
+| Address                            | What it serves        |
+| ---------------------------------- | --------------------- |
+| `http://localhost:5000/api/v1`     | The API               |
+| `http://localhost:5000/docs`       | Swagger UI            |
+| `http://localhost:5000/docs.json`  | The OpenAPI document  |
 
-Build for production:
+### Build and run in production mode
 
 ```bash
 pnpm build
-```
-
-Preview the production build:
-
-```bash
-pnpm preview
+pnpm start
 ```
 
 ---
 
-## 👥 Team
+## Environment variables
+
+Copy `.env.example` to `.env` and fill it in. Never commit `.env`.
+
+### Required
+
+| Variable                             | Description                                                                                        |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `MONGODB_URI`                        | MongoDB connection string. The seed script uses the same value                                     |
+| `JWT_SECRET`                         | Secret used to sign access tokens                                                                  |
+| `JWT_REFRESH_SECRET`                 | Secret used to sign refresh tokens. Must differ from `JWT_SECRET`                                  |
+| `APP_URL`                            | Public URL of the frontend. Used to build shareable payment link URLs and to allow CORS in production |
+
+### Recommended
+
+| Variable                             | Description                                                                                        |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`                           | `development` or `production`. Controls log level, CORS policy and error detail                    |
+| `PORT`                               | HTTP port. Defaults to `5000`                                                                      |
+| `JWT_EXPIRES_IN`                     | Access token lifetime. Defaults to `7d`                                                            |
+| `JWT_REFRESH_EXPIRES_IN`             | Refresh token lifetime. Defaults to `30d`                                                          |
+| `API_URL`                            | Public URL of this API. Listed as the production entry in the Swagger servers dropdown             |
+| `CLOUDINARY_CLOUD_NAME`              | Cloudinary account name. Required for profile and business image uploads                           |
+| `CLOUDINARY_API_KEY`                 | Cloudinary API key                                                                                 |
+| `CLOUDINARY_API_SECRET`              | Cloudinary API secret                                                                              |
+| `INTERSWITCH_MERCHANT_ENCODED_VALUE` | Base64 merchant credentials used to obtain a gateway token. Required for card payments             |
+| `INTERSWITCH_PROVIDER_ENCODED_VALUE` | Base64 provider credentials used for recurring card validation                                     |
+
+### Reserved
+
+Present in the environment template for completeness and for the gateway work that is still blocked. Nothing breaks if they are left blank.
+
+| Variable                       | Description                                                        |
+| ------------------------------ | ------------------------------------------------------------------ |
+| `APP_NAME`                     | Display name of the platform                                       |
+| `INTERSWITCH_MERCHANT_CODE`    | Merchant code. The confirmation call currently uses a sandbox code |
+| `INTERSWITCH_CLIENT_ID`        | Gateway client id                                                  |
+| `INTERSWITCH_CLIENT_SECRET`    | Gateway client secret                                              |
+| `INTERSWITCH_BASE_URL`         | Gateway base URL                                                   |
+| `INTERSWITCH_PASSPORT_URL`     | Gateway identity service URL                                       |
+| `INTERSWITCH_PAYABLE_CODE`     | Payable code tied to the merchant account                          |
+
+---
+
+## Architecture
+
+Layered Express application: routes declare the surface, controllers handle HTTP, services own the gateway integration, and Mongoose models own persistence. Cross cutting concerns live in middleware and utilities so nothing is duplicated between features.
+
+```
+src/
+├── config/        Database and Cloudinary clients
+├── constants/     Shared constants, including the test account catalogue
+├── controllers/   Request handlers, one module per feature
+├── docs/          OpenAPI document, reusable components and the Swagger UI router
+│   ├── components/  Schemas, responses, parameters and security schemes
+│   └── paths/       Endpoint definitions, one module per feature
+├── middleware/    Authentication, error handling and rate limiting
+├── models/        Mongoose schemas
+│   ├── billing/     Payment links and transactions
+│   └── profiles/    Users and customers
+├── routes/        Route declarations mounted under /api/v1
+├── scripts/       Operational scripts, including the seed script
+├── services/      Interswitch gateway integration and the HTTP client
+├── types/         Shared TypeScript types
+└── utils/         Logging, encoding, card auth data, uploads and helpers
+```
+
+Request flow for a protected endpoint:
+
+```
+Request
+  -> helmet, CORS, rate limiter, body parsers
+  -> route
+  -> authenticate middleware (verifies the JWT, loads the user)
+  -> controller (resolves the business from the owner, validates input)
+  -> model or service
+  -> JSON response { success, data, message }
+```
+
+### Endpoint map
+
+The full reference with schemas and examples lives at [`/docs`](https://pay-cycle-backend.onrender.com/docs). The surface at a glance:
+
+| Group          | Endpoints                                                                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Authentication | `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`                                                       |
+| Profile        | `GET /profile/me`, `PUT /profile/me`, `PUT /profile/business/:id`                                                                          |
+| Products       | `GET /products`, `POST /products`, `GET /products/:id`, `PUT /products/:id`, `DELETE /products/:id`                                        |
+| Payment links  | `GET /payment-links`, `POST /payment-links`, `GET /payment-links/:id`, `PUT /payment-links/:id`, `DELETE /payment-links/:id`               |
+| Checkout       | `POST /pay/card-payment`, `POST /pay/otp/verify`, `GET /pay/confirm-payment`                                                                |
+| Customers      | `GET /customers`, `POST /customers`, `GET /customers/:id`, `PUT /customers/:id`                                                            |
+| Transactions   | `GET /transactions`, `GET /transactions/:id`                                                                                               |
+| Analytics      | `GET /analytics/dashboard`, `GET /analytics/revenue`                                                                                       |
+| Wallet         | `GET /wallet/:businessId`, `GET /wallet/withdrawals/:businessId`, `POST /wallet/withdraw/:businessId`, `POST /wallet/withdraw/:id/:businessId/cancel` |
+
+`GET /payment-links/:id` and the three checkout endpoints are public. Everything else requires a bearer token.
+
+---
+
+## Conventions
+
+**Responses.** Success carries `success: true` and a `data` payload, with `message` on writes. List endpoints add `pagination` next to `data`. Failures keep the envelope with `success: false` and a `message`.
+
+**Money.** Amounts sent to and returned by PayCycle are in naira. The gateway confirmation response reports its `amount` in kobo, so divide by 100 before displaying it.
+
+**Dates.** Every timestamp is ISO 8601 in UTC.
+
+**Rate limits.** 300 requests per 15 minutes per IP across the API, and 10 per 15 minutes on register and login. Both return 429 with standard `RateLimit-*` headers.
+
+**Uploads.** Profile and business updates take `multipart/form-data` with an optional `image` file up to 5MB. Everything else is JSON.
+
+---
+
+## Deployment
+
+The API is deployed on [Render](https://render.com) as a Node web service.
+
+| Setting       | Value           |
+| ------------- | --------------- |
+| Build command | `pnpm install && pnpm build` |
+| Start command | `pnpm start`    |
+| Node version  | 18 or newer     |
+
+Checklist before a deploy:
+
+1. Set every required environment variable in the Render dashboard.
+2. Set `NODE_ENV=production` so CORS is restricted to `APP_URL` and stack traces stay out of responses.
+3. Set `API_URL` to the deployed URL so the Swagger servers dropdown lists production first.
+4. Set `APP_URL` to the deployed frontend so generated payment link URLs resolve.
+5. Allow the Render outbound IP range in MongoDB Atlas network access.
+
+The seed script is not run automatically. Run `pnpm seed` locally against the production `MONGODB_URI` when the test accounts are needed there.
+
+---
+
+## Limitations and blockers
+
+**Note:** these issues were escalated on the Slack group. The ones below are what the support team could not resolve before submission.
+
+**Test credentials.** The payment integration runs on test credentials. A complaint was submitted and the live credentials request form was filled, but the credentials did not arrive before submission. Approval was given by the support team to submit on test credentials.
+
+**Card payment API.** The card endpoint `https://qa.interswitchng.com/api/v3/purchases` was unstable as of 3PM on the deadline day, returning 500 errors that surface as an error message in the checkout flow. The implementation could not be pivoted in time.
+
+**Subscription management UI was not shipped**, because:
+
+- The Interswitch API exposed no endpoints for pausing, resuming or cancelling subscriptions at the time of development.
+- Recurring charges were implemented and tested on the backend but could not be integrated end to end without those gateway endpoints.
+- The recurring charge endpoint `https://qa.interswitchng.com/api/v3/purchases/recurrents` returns a server error.
+
+All subscription related UI was therefore removed from the shipped version rather than presenting broken features.
+
+**Fully functional:** one time payment checkout via payment links, transaction recording and tracking, wallet and payout management.
+
+---
+
+## Team
 
 | Name                       | Role                               |
 | -------------------------- | ---------------------------------- |
@@ -192,266 +352,6 @@ pnpm preview
 
 ---
 
-## API Endpoint Breakdown
-
-```
-
-[Register]
-
-endpoint: /auth/register
-method: POST
-payload: {
-  firstName: string,
-  lastName: string,
-  email: string,
-  password: string
-  businessName: string;
-}
-
-[Login]
-
-endpoint: /auth/login
-method: POST
-payload: {
-  email: string,
-  password: string
-}
-
-[Refresh Token]
-
-endpoint: /auth/refresh
-method: POST
-payload: {}
-
-[Logout]
-
-endpoint: /auth/logout
-method: POST
-auth: required
-payload: {}
-
-[Get Transactions]
-
-endpoint: /transactions
-method: GET
-auth: required
-
-[Get Single Transaction]
-
-endpoint: /transactions/:id
-method: GET
-auth: required
-params: {
-  id: string
-}
-
-
-[Dashboard Stats]
-
-endpoint: /analytics/dashboard
-method: GET
-auth: required
-
-[Revenue Chart]
-
-endpoint: /analytics/revenue
-method: GET
-auth: required
-
-
-[Get Wallet Details]
-
-endpoint: /wallet/:businessId
-method: GET
-auth: required
-params: {
-  businessId: string
-}
-
-
-[Get Withdrawals]
-
-endpoint: /wallet/withdrawals/:businessId
-method: GET
-auth: required
-
-[Create Withdrawal Request]
-
-endpoint: /wallet/withdraw/:businessId
-method: POST
-auth: required
-payload: {
-  amount: number,
-  note?: object
-}
-
-[Cancel Withdrawal Request]
-
-endpoint: /wallet/withdraw/:id/:businessId/cancel
-method: POST
-auth: required
-params: {
-  id: string,
-  businessId: string
-}
-
-[Get Products]
-
-endpoint: /products
-method: GET
-auth: required
-
-[Get Product]
-
-endpoint: /products/:id
-method: GET
-auth: required
-
-[Create Product]
-
-endpoint: /products
-method: POST
-auth: required
-payload: {
-  name: string,
-  price: number,
-  description?: string
-  features: string[]
-}
-
-[Update Product]
-
-endpoint: /products/:id
-method: PUT
-auth: required
-
-[Delete Product]
-
-endpoint: /products/:id
-method: DELETE
-auth: required
-
-[Card Payment]
-
-endpoint: /pay/card-payment
-method: POST
-payload:
-{
-      cardDetails: {
-  cvv: string;
-  exp_date: string;
-  pan: string;
-  pin: string;
-},
-      amount:string|number,
-      customerDetails: {
-        firstName: string;
-        lastName: string;
-        email: string;
-        phone: string;
-      },
-      paymentType: "recurring"|"one_time";
-      businessId: string;
-      productId: string;
-    }
-
-[Verify OTP]
-
-endpoint: /pay/otp/verify
-method: POST
-payload: {
-  paymentId: string;
-  otp: string,
-  transactionRef: string
-}
-
-[Confirm Payment]
-
-endpoint: /pay/confirm-payment
-method: GET
-
-
-[Get Payment Links]
-
-endpoint: /payment-links
-method: GET
-auth: required
-
-[Get Payment Link]
-
-endpoint: /payment-links/:id
-method: GET
-
-[Create Payment Link]
-
-endpoint: /payment-links
-method: POST
-auth: required
-
-[Update Payment Link]
-
-endpoint: /payment-links/:id
-method: PUT
-auth: required
-
-[Delete Payment Link]
-
-endpoint: /payment-links/:id
-method: DELETE
-auth: required
-
-[Get Customers]
-
-endpoint: /customers
-method: GET
-auth: required
-
-[Get Customer]
-
-endpoint: /customers/:id
-method: GET
-auth: required
-
-[Create Customer]
-
-endpoint: /customers
-method: POST
-auth: required
-
-[Update Customer]
-
-endpoint: /customers/:id
-method: PUT
-auth: required
-
-[Get Profile]
-
-endpoint: /profile/me
-method: GET
-auth: required
-
-[Update Profile]
-
-endpoint: /profile/me
-method: PUT
-auth: required
-content-type: multipart/form-data
-payload: {
-    image?:File,
-    ...others
-}
-
-[Update Business Profile]
-
-endpoint: /profile/business/:id
-method: PUT
-auth: required
-content-type: multipart/form-data
-
-```
-
----
-
 <div align="center">
-  <sub>Built with ❤️ for Nigeria · Powered by <a href="https://developer.interswitchgroup.com">Interswitch</a></sub>
+  <sub>Built for Nigeria. Powered by <a href="https://developer.interswitchgroup.com">Interswitch</a>.</sub>
 </div>

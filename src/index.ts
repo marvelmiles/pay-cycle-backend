@@ -15,6 +15,7 @@ import { globalLimiter } from "./middleware/request";
 import analyticRouter from "./routes/analytic";
 import profileRouter from "./routes/profile";
 import walletRouter from "./routes/wallet";
+import docsRouter, { DOCS_ROUTE } from "./docs";
 
 const app: Application = express();
 
@@ -23,6 +24,8 @@ app.set("trust proxy", 1);
 const PORT = process.env.PORT || 5000;
 
 connectDB();
+
+app.use(docsRouter);
 
 app.use(
   helmet({
@@ -59,6 +62,9 @@ app.use(errorHandler);
 
 app.listen(PORT, () => {
   logger.info(`API running on port ${PORT} [${process.env.NODE_ENV}]`);
+  logger.info(
+    `API reference available at http://localhost:${PORT}${DOCS_ROUTE}`,
+  );
 });
 
 export default app;

@@ -1,10 +1,21 @@
 import mongoose, { Document, Schema } from "mongoose";
 
+export const WITHDRAW_STATUSES = [
+  "pending",
+  "successful",
+  "failed",
+  "refunded",
+  "rejected",
+  "cancelled",
+] as const;
+
+export type WithdrawStatus = (typeof WITHDRAW_STATUSES)[number];
+
 export interface IWithdrawDoc extends Document {
   business: mongoose.Types.ObjectId;
   amount: number;
   currency: string;
-  status: "pending" | "successful" | "rejected" | "cancelled";
+  status: WithdrawStatus;
   failureReason?: string;
   note: string;
 }
@@ -16,7 +27,7 @@ const WithdrawSchema = new Schema<IWithdrawDoc>(
     currency: { type: String, default: "NGN" },
     status: {
       type: String,
-      enum: ["pending", "successful", "failed", "refunded"],
+      enum: WITHDRAW_STATUSES,
       default: "pending",
     },
     failureReason: { type: String },

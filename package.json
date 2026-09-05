@@ -1,12 +1,13 @@
 {
-  "name": "billing-platform-backend",
+  "name": "pay-cycle-backend",
   "version": "1.0.0",
-  "description": "Billing & Subscription Management Platform - Backend API",
+  "description": "PayCycle - Billing and payment management platform API",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "seed": "tsx src/scripts/seed.ts",
     "lint": "eslint src --ext .ts"
   },
   "dependencies": {
@@ -27,6 +28,7 @@
     "multer": "^2.1.1",
     "node-cron": "^3.0.3",
     "node-forge": "^1.3.3",
+    "swagger-ui-express": "^5.0.1",
     "uuid": "^9.0.1",
     "winston": "^3.11.0"
   },
@@ -40,7 +42,9 @@
     "@types/multer": "^2.1.0",
     "@types/node": "^20.10.6",
     "@types/node-cron": "^3.0.11",
+    "@types/swagger-ui-express": "^4.1.8",
     "@types/uuid": "^9.0.7",
+    "openapi-types": "^12.1.3",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3"
   }
